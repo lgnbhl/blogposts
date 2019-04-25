@@ -1,0 +1,160 @@
+---
+title: "Is There Gender Equality in the Pokémon Universe?"
+subtitle: "Exploring Pokémon sex ratio and building an interactive sunburst diagram."
+date: "06/10/2018"
+author: "Felix Luginbuhl"
+output: 
+  html_document:
+    code_folding: "hide"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+# install.packages(c("DT", "tidyverse", "treemap", "sunburstR"))
+# dir.create("input") # dir.create("input")
+```
+
+[![](output/pokemon_genders.png)](https://lgnbhl.github.io/dataisbeautiful/pokemon_genders.html)
+
+With more than 13 millions of subscribers, Reddit's *[Data Is
+Beautiful](https://www.reddit.com/r/dataisbeautiful/comments/9cuzs3/battle_dataviz_battle_for_the_month_of_september/)* is one of the main online forum on data visualization. Last week I came accross the funny dataset of the current DataViz
+monthly challenge: [Information on All 802
+Pokemon](https://www.kaggle.com/rounakbanik/pokemon). Having a quick
+look at the data, I discovered with surprize a
+`percentage_male` variable. I wasn’t aware that Pokémon have genders. So
+I decided to dig further into this gender dimension of the Pokémon
+universe.
+
+I learnt that since the 2nd generation, Pokémon could either be male
+or female. For example, when a little Pikachu get out of its egg, he has
+50% percent of being male (and 50% of being female). Some Pokémons have
+more chances to be male, some to be female and some have no genders (as
+I always thought). Take
+[Squirtle](https://en.wikipedia.org/wiki/Squirtle) for example.
+According to the dataset, he has 88.1% of chances to be male. Squirtle
+is therefore a male Pokémon.
+
+This surprise led me to ask a simple question: **is there gender
+equality in the Pokémon universe?**
+
+## Catch ’Em All
+
+Firstly, let’s get the data and classify the Pokémon according to their more probable gender.
+
+```{r}
+library(tidyverse)
+library(DT)
+
+pokemon <- read_csv("input/pokemon.csv") #data from https://www.kaggle.com/rounakbanik/pokemon
+
+pokemon_gender <- pokemon %>%
+  select(percentage_male, generation, name) %>%
+  mutate(gender = case_when(percentage_male == 0.0 ~ "Pokémon more likely to be FEMALE",
+                            percentage_male == 11.2 ~ "Pokémon more likely to be FEMALE",
+                            percentage_male == 24.6 ~ "Pokémon more likely to be FEMALE",
+                            percentage_male == 50.0 ~ "Pokémon with equal likelihood of being FEMALE OR MALE",
+                            percentage_male == 75.4 ~ "Pokémon more likely to be MALE",
+                            percentage_male == 88.1 ~ "Pokémon more likely to be MALE",
+                            percentage_male == 100.0 ~ "Pokémon more likely to be MALE"),
+         gender = replace_na(gender, "Pokémon with NO GENDER"), #NA is for genderless
+         generation = case_when(generation == 1 ~ "from Generation I",
+                                generation == 2 ~ "from Generation II",
+                                generation == 3 ~ "from Generation III",
+                                generation == 4 ~ "from Generation IV",
+                                generation == 5 ~ "from Generation V",
+                                generation == 6 ~ "from Generation VI",
+                                generation == 7 ~ "from Generation VII")) %>%
+  count(gender, generation, name) #mutate(n = 1) would also work
+
+datatable(select(pokemon_gender, name, generation, gender), rownames = FALSE, 
+          options = list(pageLength = 5, dom = 'ftpi'))
+```
+
+## Visualize ’Em all
+
+A simple treemap allows us to visualize our hierarchical dataset.
+
+```{r}
+library(treemap)
+
+pokemon_tm <- treemap(pokemon_gender,
+                      index = c("gender", "generation", "name"),
+                      vSize = "n",
+                      palette = "Pastel1",
+                      title = "Pokémon Genders over the Generations")
+```
+
+Looks like gender imbalance to me. The `Pokémon more likely to be
+FEMALE` cell is less than half the size of the `Pokémon more likely to
+be MALE` cell.
+
+The `sunburstR` package, a htmlwidget to create d3.js sequence
+sunbursts, allows us to better explore the Pokémon gender repartition
+over the generations.
+
+We get a simple but effective interactive visualization, which I published online using `flexdashboard`. Note that some modification have to be made manually inside the HTML output. 
+
+Click on the image to open the interactive page.
+
+```{r}
+library(sunburstR)
+library(d3r)
+library(htmlwidgets)
+
+pokemon_tm_nest <- d3_nest(
+  pokemon_tm$tm[,c("gender", "generation", "name", "vSize", "color")],
+  value_cols = c("vSize", "color")
+  )
+
+sb <- sunburst(
+  data = pokemon_tm_nest,
+  valueField = "vSize",
+  legend = list(w = 400),
+  legendOrder = c("Pokémon more likely to be FEMALE", 
+                  "Pokémon more likely to be MALE", 
+                  "Pokémon with equal likelihood of being FEMALE OR MALE",
+                  "Pokémon with NO GENDER"),
+  count = TRUE,
+  sumNodes = FALSE,
+  colors = htmlwidgets::JS("function(d){return d3.select(this).datum().data.color;}"),
+  withD3 = TRUE)
+
+sb <- htmlwidgets::onRender(sb,
+  #ref: https://github.com/timelyportfolio/sunburstR/issues/15
+  "function(el,x){
+  // have legend as default
+    d3.select(el).select('.sunburst-togglelegend').property('checked', true);
+    d3.select(el).select('.sunburst-legend').style('visibility', '');
+  }"
+  )
+```
+
+```{js}
+## code to copy past into the equivalent html output
+
+// Fade all but the current sequence, and show it in the breadcrumb trail.
+  function mouseover(d) {
+
+    var percentage = (100 * d.value / totalSize).toPrecision(2); // precision 2 - lgnbhl mod
+    var percentageString = percentage + "%";
+    if (percentage < 0.13) { // conditionality added
+      percentageString = "";
+    }
+
+    var countString = [
+        '<span style = "font-size:.7em">',
+        d3Format.format("1.2s")(d.value) + ' Pokémon on 801', // on 801 Pokémon
+        '</span>'
+      ].join('');
+    if (percentage < 0.13) { // conditionality added
+      countString = d.data.name;
+    }
+```
+
+[![](output/pokemon_genders.png)](https://lgnbhl.github.io/dataisbeautiful/pokemon_genders.html)
+
+Thanks for reading. For updates of recent blog posts, follow me on [Twitter](https://twitter.com/lgnbhl).
