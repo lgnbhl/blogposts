@@ -1,0 +1,570 @@
+---
+title: "Can you Guess a Cuisine from its Ingredients?"
+excerpt: "Building classification models to predict dish's cuisines from recipe ingredients."
+date: "30/06/2018"
+author: "Felix Luginbuhl"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+# install.packages(c("DT", "ggthemes", "tidyr", "tidyverse", "wordcloud", "SnowballC", "tidytext", "tm", "caret", "h2o", "rpart.plot", "rsample", "xgboost"))
+# dir.create("input") # dir.create("output")
+```
+
+Cooking is sometimes used as a metaphor for data preparation in
+machine learning. In order to practice my skills in
+machine learning, I decided to look for a dataset related to cooking. 
+After a quick research online, I
+found [this](https://www.kaggle.com/c/whats-cooking/data) Kaggle
+dataset. In this Kaggle competition, the game is to predict the category of a
+dish’s cuisine given a list of its ingredients.
+
+## Exploratory Data Analysis
+
+Let’s begin by reading and joining the datasets downloaded on [Kaggle](https://www.kaggle.com/c/whats-cooking/data).
+
+```{r}
+library(tidyverse)
+library(jsonlite)
+
+train  <- fromJSON("input/train.json", flatten = TRUE) %>%
+  mutate(cuisine = as.factor(cuisine))
+
+test <- fromJSON("input/test.json", flatten = TRUE) %>%
+  mutate(cuisine = NA, # Add cuisine variable
+         cuisine = factor(cuisine, levels = c(levels(train$cuisine)))) #add levels
+
+train_unnested <- train %>%
+  tidyr::unnest(ingredients) %>%
+  mutate(ingredients = str_replace_all(ingredients, "-","_"), # allow dash
+         ingredients = str_remove_all(ingredients, "[^A-Za-z0-9_ ]"), #keep letters, spaces, dash
+         type = "train")
+
+test_unnested <- test %>%
+  tidyr::unnest(ingredients) %>%
+  mutate(ingredients = str_replace_all(ingredients, "-","_"), # allow dash
+         ingredients = str_remove_all(ingredients, "[^A-Za-z0-9_ ]"), #keep letters, spaces, dash
+         type = "test")
+
+dataset <- full_join(train_unnested, test_unnested) %>%
+  as_tibble()
+
+dataset %>% arrange(id)
+```
+
+What is the repartition of our train dataset in terms of `cuisine`?
+
+```{r}
+dataset %>%
+  filter(type == "train") %>%
+  group_by(cuisine) %>%
+  summarize(n = n()) %>%
+  ggplot(aes(x = cuisine, y = n)) + 
+  geom_col() +
+  coord_flip() +
+  ggthemes::theme_economist_white(horizontal = FALSE) +
+  theme(plot.background = element_rect(fill = "#f8f2e4")) +
+  labs(x = "", y = "Number of Recipes",
+       title = "Twenty cuisines",
+       subtitle = "What's cooking?",
+       caption = "Félix Luginbühl (@lgnbhl)\nData source: Kaggle, Yummly")
+```
+
+Italian and Mexican recipes are prevalent. We also notice a class imbalance.
+
+Let’s explore the repartition of the number of `ingredients` by cuisine
+in the train dataset.
+
+```{r}
+dataset %>%
+  filter(type == "train") %>%
+  group_by(id, cuisine) %>%
+  summarize(n = n()) %>%
+  group_by(cuisine) %>%
+  ggplot(aes(x = cuisine, y = n)) +
+  geom_boxplot() + 
+  coord_flip() +
+  ggthemes::theme_economist_white(horizontal = FALSE) +
+  theme(plot.background = element_rect(fill = "#f8f2e4")) +
+  labs(x = "", y = "Number of ingredients per recipe",
+       title = "Twenty cuisines",
+       subtitle = "What's cooking?",
+       caption = "Félix Luginbühl (@lgnbhl)\nData source: Kaggle, Yummly")
+```
+
+How many unique ingredients do we have in the dataset?
+
+```{r}
+dataset %>%
+  distinct(ingredients) %>%
+  count()
+```
+
+What are the top 100 ingredients of the full dataset?
+
+```{r}
+library(wordcloud)
+set.seed(1234)
+
+dataset %>%
+  count(ingredients, sort = TRUE) %>%
+  with(wordcloud(ingredients, n, max.words = 100, scale = c(6, .1), colors = brewer.pal(6, 'Dark2')))
+```
+
+What about the top 10 ingredients by cuisine?
+
+```{r}
+library(DT)
+
+top10 <- train_unnested %>% 
+  group_by(cuisine) %>%
+  count(ingredients, sort = TRUE) %>% 
+  top_n(10) %>%
+  arrange(desc(cuisine))
+
+DT::datatable(
+  top10,
+  options = list(pageLength = 5, dom = "ftpi"),
+  rownames = FALSE,
+  caption = "Top 10 Ingredients by Cuisine")
+```
+
+## Preparing the Data
+
+First, we want to tidy our dataset. We will use the `unnest_tokens`
+function from {tidytext} before extracting the word stems with
+{SnowballC}.
+
+```{r}
+library(tidytext)
+library(SnowballC)
+
+dataset_tidy <- dataset %>%
+  tidytext::unnest_tokens(word, ingredients, drop = FALSE) %>%
+  anti_join(stop_words) %>%
+  mutate(wordStem = SnowballC::wordStem(word)) #Stemming
+
+dataset_tidy %>% arrange(id)
+```
+
+As you can see, we have now the ingredient words in the `word` and the
+stem word in `wordStem`. Note that “soy” became “soi” with the stemming.
+
+We will now build a document-term matrix with the `cast_dtm` function of
+{tidytext} and reduce the matrix by removing the less frequent words.
+
+```{r}
+###################################################################
+# FROM HERE, RSTUDIO.CLOUD ISN'T POWERFULL ENOUGH TO RUN THE CODE #
+# SO RUN THE FOLLOWING CODE ON YOUR COMPUTER OR ON RSTUDIO SERVER #
+###################################################################
+
+library(tm)
+
+dataset_dtm <- dataset_tidy %>%
+  count(id, wordStem, sort = TRUE) %>%
+  cast_dtm(id, wordStem, n, weighting = tm::weightTf) #tm:weightTfIdf also possible
+
+dataset_dtm <- dataset_dtm %>%
+  tm::removeSparseTerms(sparse = 0.999) %>%
+  as.matrix() %>%
+  as.data.frame() %>%
+  rownames_to_column("id") %>%
+  mutate(id = as.numeric(id))
+
+dataset_dtm <- dataset_dtm %>%
+  inner_join(dataset_tidy %>%
+               select(id, type, cuisine), by = "id") %>%
+  mutate(cuisine = as.factor(cuisine)) %>%
+  distinct() %>%
+  select(cuisine, id, type, everything()) %>%
+  as_tibble()
+
+dataset_dtm %>% arrange(id)
+```
+
+Nice! We have a dataset of 803 variables.
+
+## Feature Engineering
+
+Now some quick feature engineering. We will add a `nIng` variable, which give the number of ingredients by
+recipe. We will also create three variables that count the number of ingredients
+“typical” from three large regions: Asian, South and North
+ingredients. The idea comes from [this](https://www.kaggle.com/alonalevy/cultural-diffusion-by-recipes) other Kernel.
+
+```{r}
+sumIng <- dataset_tidy %>%
+  group_by(id) %>%
+  count(id) %>%
+  rename(nIng = n)
+
+dataset_dtm <- dataset_dtm %>%
+  full_join(sumIng, by = "id")
+
+dataset_dtm %>%
+  select(cuisine, id, nIng, type, everything()) %>%
+  arrange(id)
+
+#ref: https://www.kaggle.com/alonalevy/cultural-diffusion-by-recipes
+north_cuisine <- c("british", "irish", "southern_us", "russian", "french")
+south_cuisine <- c("brazilian", "cajun_creole", "greek", "indian", "italian", "jamaican", "mexican", "moroccan", "spanish")
+asian_cuisine <- c("filipino")
+
+ingredients_north <- dataset_tidy %>%
+  select(id, cuisine, wordStem) %>%
+  filter(cuisine %in% north_cuisine)
+
+ingredients_south <- dataset_tidy %>%
+  select(id, cuisine, wordStem) %>%
+  filter(cuisine %in% south_cuisine)
+
+ingredients_asian <- dataset_tidy %>%
+  select(id, cuisine, wordStem) %>%
+  filter(cuisine %in% asian_cuisine)
+
+common_north <- ingredients_north %>%
+  anti_join(ingredients_south, by = "wordStem") %>%
+  anti_join(ingredients_asian, by = "wordStem")
+
+common_south <- ingredients_south %>%
+  anti_join(ingredients_north, by = "wordStem") %>%
+  anti_join(ingredients_asian, by = "wordStem")
+
+common_asian <- ingredients_asian %>%
+  anti_join(ingredients_north, by = "wordStem") %>%
+  anti_join(ingredients_south, by = "wordStem")
+
+# Now let’s add three variables that count the number of occurrences of
+# each of this regional ingredients by recipe.
+
+dataset_tidy2 <- dataset_tidy %>%
+  mutate(north_ing = ifelse(dataset_tidy$wordStem %in% common_north$wordStem, 1, 0)) %>%
+  mutate(south_ing = ifelse(dataset_tidy$wordStem %in% common_south$wordStem, 1, 0)) %>%
+  mutate(asian_ing = ifelse(dataset_tidy$wordStem %in% common_asian$wordStem, 1, 0)) %>%
+  select(cuisine, north_ing, south_ing, asian_ing, everything())
+
+# count the regional wordSteam by id
+nAsian_ingredients <- dataset_tidy2 %>%
+  select(id, asian_ing) %>%
+  filter(asian_ing == 1) %>%
+  count(id) %>%
+  rename(nAsian_ing = n)
+
+nSouth_ingredients <- dataset_tidy2 %>%
+  select(id, south_ing) %>%
+  filter(south_ing == 1) %>%
+  count(id) %>%
+  rename(nSouth_ing = n)
+
+nNorth_ingredients <- dataset_tidy2 %>%
+  select(id, north_ing) %>%
+  filter(north_ing == 1) %>%
+  count(id) %>%
+  rename(nNorth_ing = n)
+
+# We can now join these three variables to our main dataset.
+dataset_final <- dataset_dtm %>%
+  full_join(nAsian_ingredients, by = "id") %>%
+  full_join(nSouth_ingredients, by = "id") %>%
+  full_join(nNorth_ingredients, by = "id") %>%
+  # replace NA by 0 in the new variables
+  mutate_at(vars(c(nAsian_ing, nNorth_ing, nSouth_ing)), funs(replace(., is.na(.), 0)))
+
+# write_csv(dataset_final, "output/dataset_final.csv") #save dataset
+
+dataset_final %>%
+  select(cuisine, id, nIng, nAsian_ing, nNorth_ing, nSouth_ing, everything()) %>%
+  arrange(id)
+```
+
+## Machine learning with rpart and xgboost
+
+Let's begin by building a simple tree. As the game is to work in the tidy way, I tried to find an equivalent of
+{rpart} in the tidyverse ecosystem. Sadly, {broom} doesn’t work with
+classification trees and the {broomstick} package, which aims to
+implement them, is still in development. So we will do this in the
+traditional way.
+
+```{r}
+# splitting the `train` dataset using {rsample}
+library(rsample)
+set.seed(1234)
+
+train_test_split <- dataset_final %>%
+  filter(type == "train") %>%
+  initial_split(prop = 0.8)
+
+# Retrieve train and test sets
+train_tbl <- training(train_test_split) %>% select(-type)
+test_tbl  <- testing(train_test_split) %>% select(-type)
+
+library(rpart)
+library(rpart.plot)
+set.seed(1234)
+
+cartModel <- rpart(cuisine ~ ., data = train_tbl, method = "class")
+
+prp(cartModel)
+```
+
+The plot reveals the most importants ingredients of the model.
+
+The accuracy of our classification model is “only” of 42%.
+
+```{r}
+library(caret)
+
+cartPredict <- predict(cartModel, newdata = test_tbl, type = "class")
+
+cartCM <- caret::confusionMatrix(cartPredict, test_tbl$cuisine)
+
+print(cartCM$overall)
+```
+
+We will try again, but this time with one of the algorithm which
+dominates Kaggle competitions:
+[XGboost](https://xgboost.readthedocs.io/en/latest/model.html). XGBoost
+implements gradient boosted decision trees. It is very fast and handle
+well overfitting.
+
+```{r}
+library(xgboost)
+set.seed(1234)
+
+train_matrix <- xgb.DMatrix(as.matrix(select(train_tbl, -cuisine)), 
+                            label = as.numeric(train_tbl$cuisine)-1) #feature index starts from 0
+
+# train our multiclass classification model using softmax
+# default parameters, with a maximum depth of 25.
+xgbModel <- xgboost(train_matrix, 
+                    max.depth = 25, 
+                    nround = 10, 
+                    objective = "multi:softmax", 
+                    num_class = 20)
+
+    ## [1]  train-merror:0.221873 
+    ## [2]  train-merror:0.178064 
+    ## [3]  train-merror:0.150189 
+    ## [4]  train-merror:0.127278 
+    ## [5]  train-merror:0.108580 
+    ## [6]  train-merror:0.093212 
+    ## [7]  train-merror:0.078661 
+    ## [8]  train-merror:0.067410 
+    ## [9]  train-merror:0.057668 
+    ## [10] train-merror:0.049151
+
+xgbPredict <- predict(xgbModel, newdata = as.matrix(select(test_tbl, -cuisine)))
+
+# change cuisine back to string
+xgbPredictText <- levels(test_tbl$cuisine)[xgbPredict + 1]
+
+# for a tidy confusion matrix, the `conf_mat` function of {yardstick} can also be used.
+confMat <- confusionMatrix(as.factor(xgbPredictText), test_tbl$cuisine)
+
+confMat$overall
+```
+
+We can visualize the confusion matrix of the model using {ggplot2}.
+
+```{r}
+#ref: https://stackoverflow.com/questions/37897252
+confMat$table %>%
+  as.data.frame() %>%
+  ggplot(aes(x = Prediction, y = Reference)) +
+  geom_tile(aes(fill = Freq)) +
+  geom_text(aes(label = sprintf("%1.0f", Freq)), vjust = 1) +
+  scale_fill_gradient(low = "blue", high = "red", trans = "log") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 16),
+        plot.caption = element_text(colour = "dimgrey"),
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust=1),
+        plot.background = element_rect(fill = "#f8f2e4")) +
+  labs(title = "Confusion matrix",
+       subtitle = "What's cooking?",
+       fill = "Freq (log)",
+       caption = "Félix Luginbühl (@lgnbhl)\nData source: Kaggle, Yummly")
+```
+
+The confusion matrix reveals the class imbalance. What about the
+sensitivity (true positive rate) results by class?
+
+```{r}
+confMat$byClass %>%
+  as.data.frame() %>%
+  rownames_to_column("cuisine") %>%
+  select(cuisine, Sensitivity, Specificity) %>%
+  arrange(Sensitivity)
+```
+
+The sensibility metric shows that the British cuisine is correctly
+identified as such only one third of the time (32%), followed by Russian
+and Spanish cuisine.
+
+Finally let’s look at the 20 most important features of the model.
+
+```{r}
+names <- colnames(select(train_tbl, -cuisine))
+importance_matrix <- xgb.importance(names, model = xgbModel)
+
+xgb.ggplot.importance(importance_matrix[1:30,]) +
+  theme_bw() +
+  theme(legend.background = element_blank(),
+        legend.key = element_blank(),
+        plot.title = element_text(size = 14, face = "bold"),
+        plot.background = element_rect(fill = "#f8f2e4")) +
+  labs(title = "Feature importance",
+       subtitle = "What's cooking?",
+       caption = "Félix Luginbühl (@lgnbhl)\nData source: Kaggle, Yummly")
+```
+
+The most important feature to predict the cuisine is the word tortilla, followed by soi (i.e. soja), parmesan and the number of ingredients in the recipe.
+
+It would be frustrating to stop here. Let’s submit our work on Kaggle to
+know how well our model “really” performed.
+
+## Submitting on Kaggle
+
+To submit our predictions on Kaggle, let's use the same code as before but with the full training dataset. We will run xggoost, this time with 120 rounds. It will take some time! Let's calculate how much.
+
+```{r}
+training <- dataset_final %>%
+  filter(type == "train") %>%
+  select(-type)
+
+testing <- dataset_final %>%
+  filter(type == "test") %>%
+  select(-type)
+
+testing <- testing %>%
+  mutate(cuisine = "NA") %>%
+  mutate(cuisine = factor(cuisine, levels = c(levels(training$cuisine)))) #add levels
+
+library(xgboost)
+set.seed(1234)
+
+train_matrix <- xgb.DMatrix(as.matrix(select(training, -cuisine)), 
+                            label = as.numeric(training$cuisine)-1)
+
+start_time <- Sys.time()
+
+xgbModel2 <- xgboost(train_matrix, 
+                    max.depth = 25, 
+                    nround = 120, 
+                    objective = "multi:softmax", 
+                    num_class = 20)
+
+end_time <- Sys.time()
+time_taken <- end_time - start_time
+
+time_sec <- difftime(end_time, start_time, units = "secs")
+
+print(time_taken)
+```
+
+To build the xgboost model, my computer worked more than 4 hours!
+
+We can create and submit the CSV file on Kaggle.
+
+```{r}
+# predict and change cuisine back to string
+xgb.submit <- predict(xgbModel2, newdata = as.matrix(select(test_tbl, -cuisine)))
+xgb.submit.text <- levels(testing$cuisine)[xgb.submit + 1]
+
+# submission
+sample <- read.csv('input/sample_submission.csv')
+predictions <- data_frame(id = as.integer(testing$id), cuisine = as.factor(xgb.submit.text))
+
+sample %>%
+  select(id) %>%
+  inner_join(predictions) %>%
+  write_csv("xgboost_submission.csv")
+```
+
+We have a accuracy score of 0.7871. Nice!
+
+## Using h2o's AutoML Algorithm
+
+Could we have a better score on Kaggle using the new h2o's Automatic machine learning function? 
+
+Let's split the ```training``` dataset again and run the ```h2o.automl``` during the same time of xgboost.
+
+```{r}
+library(h2o)
+h2o.init()
+
+training_h2o <- as.h2o(training)
+
+split_h2o <- h2o.splitFrame(training_h2o, 0.8, seed = 1234)
+
+train_h2o <- h2o.assign(split_h2o[[1]], "train" ) # 80%
+valid_h2o <- h2o.assign(split_h2o[[2]], "valid" ) # 20%
+
+target <- "cuisine"
+predictors <- setdiff(names(train_h2o), target)
+
+start_time_h2o <- Sys.time()
+
+aml <- h2o.automl(x = predictors, 
+                  y = target, 
+                  training_frame = training_h2o,
+                  leaderboard_frame = valid_h2o,
+                  balance_classes = TRUE,
+                  max_runtime_secs = as.numeric(time_sec),
+                  seed = 1234
+                  )
+
+end_time_h2o <- Sys.time()
+
+time_taken_h2o <- end_time_h2o - start_time_h2o
+
+print(time_taken_h2o)
+```
+
+Oops!
+
+Our function ran twice the time of xgboost (almost 9 hours). It was expected that ```max_runtime_secs``` would compute all the running time of the function. But it doesn't. The time of the computation actually doubled. Good to know for next time!
+
+Finally, let's extract the leader model, predict the class on the testing dataset and create the CSV file for the Kaggle submission. What is the result on Kaggle of our Stacked Ensemble model?
+
+```{r}
+# Extract leader model
+automl_leader <- aml@leader
+
+#Slot "leaderboard":
+                                               #model_id mean_per_class_error
+#1    StackedEnsemble_AllModels_0_AutoML_20180606_160138            0.1740736
+#2 StackedEnsemble_BestOfFamily_0_AutoML_20180606_160138            0.1744048
+#3             GBM_grid_0_AutoML_20180606_160138_model_0            0.1906772
+#4             GLM_grid_0_AutoML_20180606_160138_model_0            0.2649155
+#5                          DRF_0_AutoML_20180606_160138            0.2678411
+#6             GBM_grid_0_AutoML_20180606_160138_model_1            0.4309833
+
+
+# Predict on test set
+testing_h2o <- as.h2o(testing)
+
+pred_conversion <- h2o.predict(object = automl_leader, newdata = testing_h2o)
+
+pred_conversion <- as.data.frame(pred_conversion)
+
+predictions <- testing %>%
+  mutate(pred = as.character(as.list(pred_conversion[1]))) %>%
+  mutate(pred = as.factor(pred)) %>%
+  select(id, pred)
+
+sample %>%
+  select(id) %>%
+  inner_join(predictions) %>%
+  rename(cuisine = pred) %>%
+  mutate(cuisine = as.factor(cuisine)) %>%
+  mutate(id = as.integer(id)) %>%
+  write_csv("h2o_submission.csv")
+```
+
+The accuracy score of our model is 0.79314. It is better than our previous xgboost model (0.7871). However, it is hard to judge in terms of algorithm performance, as h2o's AutoML ran twice the time of xgboost on my computer. 
+
+Thank you for reading! For updates of recent blog posts, [follow me on Twitter](https://twitter.com/lgnbhl).
