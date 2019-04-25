@@ -1,0 +1,206 @@
+---
+title: "Which Marvel Characters and Movies are the Most Central?"
+subtitle: "Building an interactive social network visualization of the Marvel cinematic universe."
+date: "26/01/2018"
+author: "Felix Luginbuhl"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+# install.packages(c("tidyverse", "rvest", "tidygraph", "ggraph", "ggforce", "visNetwork"))
+```
+
+To begin this year, I was looking for a quick project related to social network visualization. As R analyses on [Game of Thrones](https://shiring.github.io/networks/2017/05/15/got_final), [Star Wars](https://rpubs.com/ogimenez/200849) or [The Lord of The Rings](http://mildlyscientific.schochastics.net/2016/08/10/the-lord-of-the-rings-the-three-networks/) have already been done, I decided to visualize the superhero network of the nowadays very popular Marvel movies saga. In this blog post, we will find out which characters and movies are the most central in the Marvel cinematic universe[^1].
+
+[^1]: those who already know the Marvel movies will not learn anything new, except maybe how to use R for network visualizations.
+
+## Scraping Marvel superheros
+
+As often, the data can be found on Wikipedia. But surprisingly, the data needed was not avaiable in a English article, but within [this](https://fr.wikipedia.org/w/index.php?title=Liste_des_films_de_l%27univers_cin%C3%A9matographique_Marvel&oldid=144793972#Personnages) French article.
+
+![](input/Screenshot_MarvelWikitable.png)
+
+Let’s scrape this wikitable with the `rvest` package.
+
+```{r}
+library(tidyverse)
+library(rvest)
+# permanente link for reproductibility
+url <- "https://fr.wikipedia.org/w/index.php?title=Liste_des_films_de_l%27univers_cin%C3%A9matographique_Marvel&oldid=144793972#Personnages"
+
+marvel_df <- url %>%
+  read_html() %>%
+  html_nodes(".wikitable") %>%
+  html_table(fill = TRUE) %>%
+  .[[5]]
+
+# write_csv(marvel_df, path = "input/marvel_df.csv")
+```
+
+Now that we have the data, we need to clean it as well as translate some
+names in English. We also have to distinguish the movie names from the
+characters.
+
+```{r}
+marvel_df[1,1] <- "Iron Man 1"
+marvel_df[2,1] <- "The Incredible Hulk"
+marvel_df[4,1] <- "Thor 1"
+marvel_df[8,1] <- "Thor: The Dark World"
+marvel_df[9,1] <- "Captain America 2"
+marvel_df[10,1] <- "Guardians of the Galaxy"
+marvel_df[11,1] <- "Avengers: Age of Ultron"
+marvel_df[12,1] <- "Ant-Man 1"
+marvel_df[14,1] <- "Doctor Strange 1"
+marvel_df[15,1] <- "Guardians of the Galaxy Vol. 2"
+marvel_df[18,1] <- "Black Panther 1"
+marvel_df[20,1] <- "Ant-Man and the Wasp"
+marvel_df[21,1] <- "Captain Marvel 1"
+
+marvel_df <- marvel_df %>%
+  rename("Black Widow" = "Veuve noire",
+         "Hawkeye" = "Œil de Faucon",
+         "Scarlet Witch" = "Sorcière rouge") %>%
+  mutate(Film = factor(Film, levels = unique(Film))) %>%
+  mutate_all(funs(str_replace_all(., c("Oui" = "1", "^$" = "0")))) #^$ is for empty string
+```
+
+## Reproducing the wikitable with a heatmap
+
+Let’s tidy the data in order to reproduce the Wikipedia table with
+`ggplot2`. Note that the characters and movies are in a different order.
+
+```{r chart_MarvelNetwork_1}
+marvel_tidy <- marvel_df %>%
+  reshape2::melt(id.vars = "Film", value.name = "Value") %>%
+  rename("Character" = "variable")
+
+ggplot(marvel_tidy, aes(x = Character, y = Film)) +
+  geom_tile(aes(fill = Value)) + 
+  scale_fill_manual(values=c("0"="grey", "1"="lightgreen"),
+                    name="", labels=c("Out","In")) + 
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5),
+        plot.caption = element_text(colour = "dimgrey"),
+        axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  labs(title = "Characters appearance in the Marvel Movies",
+       caption = "Félix Luginbühl (@lgnbhl)\nData source: Wikipedia")
+```
+
+## Centrality metrics
+
+In order to know which characters and movies are the most central, we
+can use indicators like the degree (number of ties) and the closeness
+(centrality based on distance to others in the graph).
+
+```{r}
+library(tidygraph)
+
+marvel_graph <- marvel_tidy %>%
+  filter(Value != "0") %>%
+  select(-Value) %>%
+  as_tbl_graph(directed = FALSE) %>%
+  mutate(degree = centrality_degree(),
+         closeness = centrality_closeness(),
+         betweenness = centrality_betweenness()) %>%
+  #create type variable
+  full_join(tibble(film = marvel_df$Film, type = "Movie"), by = c("name" = "film")) %>%
+  mutate(type = replace_na(type, "Character"))
+
+marvel_graph %>% 
+  activate(nodes) %>% 
+  as_tibble() %>%
+  arrange(desc(degree))
+```
+
+The central characters are Iron Man and Captain America (*ex aequo*),
+followed by Nick Fury, Thor and Hulk. The central movies are the two
+Avengers movies and as well as *Captain America: Civil War* (2016).
+
+Who is the most distant character from Iron Man?
+
+```{r}
+marvel_graph %>%
+  mutate(distance = bfs_dist(name == "Iron Man", mode = "all")) %>%
+  filter(type == "Character") %>%
+  select(name, distance) %>%
+  arrange(desc(distance))
+```
+
+Captain Marvel is the most
+distant character. However, as the [movie](https://www.imdb.com/title/tt4154664/) introducing Captain Marvel will
+only be released in 2019, other Marvel characters could be added to the
+movie (and therefore reducing the distance from Iron Man).
+
+## Plotting the network
+
+Now let’s visualize the centrality degree of the movies and characters
+using {ggraph}.
+
+```{r}
+library(ggraph)
+set.seed(100)
+
+ggraph(marvel_graph, layout = "nicely") + 
+  geom_edge_diagonal(alpha = 0.2) + 
+  geom_node_point(aes(size = degree, color = as.factor(type)), alpha = 0.8) + 
+  scale_color_brewer(palette = "Set1", name = "Type") +
+  geom_node_text(aes(label = name), size = 2.5, repel = TRUE) +
+  theme_graph() +
+  theme(plot.background = element_rect(fill = "#f8f2e4")) +
+  labs(title = "Centrality in the Marvel Cinematic Universe",
+       size = "Degree",
+       caption = "Félix Luginbühl (@lgnbhl)\n Data source: Wikipedia")
+```
+
+Now let’s try some clustering, with the Walktrap algorithm.
+
+```{r chart_MarvelNetwork_3}
+set.seed(100)
+
+marvel_graph %>%
+  activate(nodes) %>%
+  mutate(group_walktrap = group_walktrap()) %>%
+  ggraph(layout = "nicely") + 
+  geom_edge_diagonal(alpha = 0.2) + 
+  geom_node_point(aes(color = as.factor(group_walktrap), shape = as.factor(type))) + 
+  geom_node_text(aes(label = name), size = 2.5, alpha = 0.8, repel = TRUE) +
+  scale_color_brewer(palette = "Set1", name = "Walktrap Group") +
+  theme_graph() +
+  theme(plot.background = element_rect(fill = "#f8f2e4")) +
+  labs(title = "Clustering the Marvel Cinematic Universe",
+       shape = "Type",
+       caption = "Félix Luginbühl (@lgnbhl)\n Data source: Wikipedia")
+```
+
+The walktrap algorithm is doing a good job, as the characters and the
+movies seem correctly grouped.
+
+## An interactive visualization of the Marvel Universe Network
+
+Making an interactive network with {visNetwork} is quite easy. Just play with the interactive network below.
+
+```{r}
+library(visNetwork)
+
+dataVis <- marvel_graph %>%
+  mutate(group = type) %>%
+  toVisNetworkData()
+
+visNetwork(nodes = dataVis$nodes, edges = dataVis$edges, width = "100%",
+           main = "Social Network of the Marvel Cinematic Universe") %>%
+  visLayout(randomSeed = 100) %>%
+  addFontAwesome() %>%
+  visGroups(groupname = "Movie", shape = "icon",
+            icon = list(code = "f008", color = "darkblue")) %>%
+  visGroups(groupname = "Character", shape = "icon",
+            icon = list(code = "f007", color = "red")) %>%
+  visOptions(highlightNearest = list(enabled = T, hover = T), nodesIdSelection = T) %>%
+  visInteraction(navigationButtons = TRUE)
+```
+
+Thanks for reading. For updates of recent blog posts, [follow me on Twitter](https://twitter.com/lgnbhl).
