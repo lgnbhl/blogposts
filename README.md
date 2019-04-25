@@ -11,6 +11,6 @@ All the data analysis of my blog (felixluginbuhl.com):
 - Which Marvel Characters and Movies are the Most Central? Building an interactive social network visualization of the Marvel cinematic universe. (https://felixluginbuhl.com/network/)
 - The Lack of Female Protagonists in Children’s Movies. Scraping Wikipedia and using machine learning to estimate the gender of central characters in 100 years of childrens’ movies. (https://felixluginbuhl.com/movies/)
 - Who’s The Most Popular Tennis Player on Twitter? Analyzing the Tweets of Roger Federer, Rafael Nadal, Novak Djokovic and Andy Murray. (https://felixluginbuhl.com/tennis/)
-- James Bond Tourism. Mapping and comparing 007 travel locations of the movie franchise. (https://felixluginbuhl.com/bond/)
+- [/bond](https://github.com/lgnbhl/blogposts/tree/master/bond). James Bond Tourism. Mapping and comparing 007 travel locations of the movie franchise. (https://felixluginbuhl.com/bond/)
 - Orwell’s 1984, An (Un)Sentimental Analysis. A text and sentiment analysis of George Orwell’s 1984 book. (https://felixluginbuhl.com/orwell/)
 - Marvel vs DC Comics. Une comparaison des résultats au Box Office avec {ggplot2} et Tableau Public. (https://felixluginbuhl.com/marvel/)
