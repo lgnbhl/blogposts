@@ -1,0 +1,804 @@
+---
+title: "The Lack of Female Protagonists in Children’s Movies"
+subtitle: "Scraping Wikipedia and using machine learning to estimate the gender of central characters in 100 years of childrens' movies."
+date: "11/12/2017"
+author: "Felix Luginbuhl"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+# install.packages(c("Amelia", "caret", "e1071", "hrbrthemes", "rvest", "tidytext", "tidyverse", "tm", "xgboost"))
+```
+
+![](https://raw.githubusercontent.com/lgnbhl/lgnbhl.github.io/master/images/image_WizardOfOz.jpg)
+
+Some time ago, I read a very interesting [post](http://giorasimchoni.com/2017/09/24/2017-09-24-where-my-girls-at/) from Giora Simchoni who used machine learning to estimate how many children's books have a central female character. Based on [this](https://www.goodreads.com/list/show/226.Favorite_books_from_my_childhood) Goodread list, he showed that for every book with a central female character, there are between 1.1 and 1.3 books written with a male protagonist.
+
+I couldn't help thinking that his analysis should be replicated on children's movies. So that's what we will do in this blog post, using [this](https://en.wikipedia.org/w/index.php?title=List_of_children%27s_films&oldid=810426354) Wikipedia article that listed 100 years of children's movies. We will see that reusing someone else code cannot be done without adapting it to the specific features of our own dataset. It's why, in addition to the multiclass classification made by Giora, we will perform a binary logistic classification. Finally, we will visualize the predictions of our models in order to know if the central character gender ratio is changing over the years[^1].
+
+Since we will reuse most of Giora's code, you really should read [his post](http://giorasimchoni.com/2017/09/24/2017-09-24-where-my-girls-at/) first. You read it? Good, let's move one!
+
+## Scraping 100 years of Children's Movies
+
+Let's begin by scraping all the children's movies links of our Wikipedia article using {rvest}.
+
+```{r}
+library(tidyverse)
+library(rvest)
+
+# Permanent link for reproducibility
+baseUrl <- "https://en.wikipedia.org/w/index.php?title=List_of_children%27s_films&oldid=810426354"
+
+urls <- baseUrl %>%
+  read_html() %>%
+  html_nodes("a") %>%
+  html_attr("href") %>%
+  keep(startsWith(., "/wiki/")) %>%
+  discard(str_detect(., "Children%27s_film")) %>%
+  discard(startsWith(., "/wiki/Wikipedia:")) %>%
+  discard(startsWith(., "/wiki/User")) %>%
+  discard(startsWith(., "/wiki/Help:")) %>%
+  discard(startsWith(., "/wiki/Talk:")) %>%
+  discard(startsWith(., "/wiki/Special:")) %>%
+  discard(startsWith(., "/wiki/Portal:")) %>%
+  discard(startsWith(., "/wiki/Category:")) %>%
+  discard(startsWith(., "/wiki/List_of_")) %>%
+  .[-c(1698:1725)] # remove infobox links
+
+tibble(urls)
+```
+
+We almost got 1700 wikilinks!
+
+Now, we want to scrape specific data from each link. To do that, we will write a function that reads a link of the `urls` vector and returns a list of 7 components, i.e. `title`, `years`, `actors`, `directors`, `country`, `language` and `description`.
+
+See you on the other side of this looong function.
+
+```{r}
+moviesData <- function(urls) {
+  
+  html <- tryCatch(read_html(str_c("https://en.wikipedia.org", urls)),
+                   error = function(e) NULL)
+  
+  infobox <- tryCatch(
+    html %>%
+      html_node(".infobox") %>%
+      html_children() %>%
+      html_text(),
+    error = function(e) NA
+  )
+  
+  title <- tryCatch(
+    html %>%
+      html_nodes(".summary") %>%
+      html_text() %>%
+      first(), # avoid title duplication
+    error = function(e) NA
+  )
+  
+  year <- tryCatch(
+    html %>%
+      html_nodes(".published") %>%
+      html_text() %>%
+      str_extract("[0-9]{4}") %>%
+      unique() %>%
+      first() %>% # avoid title duplication
+      as.numeric(),
+    error = function(e) NA
+  )
+  
+  if(is.na(year)) {
+    infoboxRow <- infobox %>%
+      str_detect("Release") %>%
+      which()
+    
+    year <- infobox[[infoboxRow[1]]] %>%
+      str_extract("[0-9]{4}") %>%
+      unique() %>%
+      first() %>%
+      as.numeric()
+  }
+  
+  getActors <- function() {
+    infoboxRow <- infobox %>%
+      str_detect("Starring") %>%
+      which()
+    actorsNames <- infobox[[infoboxRow[1]]] %>%
+      gsub("^Starring", "", .) %>%
+      gsub("\n", "", .) %>%
+      gsub("([a-z])([A-Z])", "\\1 \\2", .)
+  }
+  
+  actors <- tryCatch(
+    getActors(),
+    error = function(e) NA
+  )
+  
+  if(identical(actors, "see below") | 
+     identical(actors, "See below") | 
+     identical(actors, "See voices")) {
+    actors <- NA
+  }
+  
+  getDirectors <- function() {
+    infoboxRow <- infobox %>%
+      str_detect("Directed by") %>%
+      which()
+    directorNames <- infobox[[infoboxRow[1]]] %>%
+      gsub("Directed by", "", .) %>%
+      gsub("\n", "", .) %>%
+      gsub("([a-z])([A-Z])", "\\1 \\2", .) %>%
+      unlist()
+  }
+  
+  directors <- tryCatch(
+    getDirectors(),
+    error = function(e) NA
+  )
+  
+  getCountry <- function() {
+    infoboxRow <- infobox %>%
+      str_detect("Country") %>%
+      which()
+    countryNames <- infobox[[infoboxRow[1]]] %>%
+      gsub("Country", "", .) %>%
+      gsub("\n", "", .) %>%
+      gsub("([a-z])([A-Z])", "\\1 \\2", .)
+  }
+  
+  country <- tryCatch(
+    getCountry(),
+    error = function(e) NA
+  )
+  
+  getLanguage <- function() {
+    infoboxRow <- infobox %>%
+      str_detect("Language") %>%
+      which()
+    movieLangage <- infobox[[infoboxRow[1]]] %>%
+      gsub("Language", "", .) %>%
+      gsub("\n", "", .) %>%
+      gsub("([a-z])([A-Z])", "\\1 \\2", .) %>%
+      unlist()
+  }
+  
+  language <- tryCatch(
+    getLanguage(),
+    error = function(e) NA
+  )
+  
+  article <- tryCatch(
+    html %>%
+      html_nodes(".mw-body") %>%
+      html_text() %>%
+      str_split("\n") %>%
+      unlist() %>%
+      gsub("\t", "", .),
+    error = function(e) NA
+  )
+  
+  article <- tryCatch(
+    article <- article[article != ""], # remove empty lines
+    error = function(e) NA
+  )
+  
+  getDescription <- function() {
+    descriptionRow <<- article %>%
+      str_detect("^Plot") %>%
+      which() %>%
+      sum(+1) # row number after plot title
+    movieDescription <<- article[[descriptionRow[1]]] %>%
+      gsub("Language", "", .) %>%
+      gsub("\n", "", .) %>%
+      gsub("([a-z])([A-Z])", "\\1 \\2", .) %>%
+      unlist()
+  }
+  
+  description <- tryCatch(
+    getDescription(),
+    error = function(e) NA
+  )
+  
+  # Remove Wikipedia warning about the plot
+  if(startsWith(description, "This article") | 
+     startsWith(description, "This section") | 
+     startsWith(description, "This film's plot summary")) {
+    descriptionRow <- sum(descriptionRow + 1)
+    description <- article[[descriptionRow[1]]]
+  }
+  
+  # if the description has less than 70 characters, skipping the row
+  if(nchar(description) < 70) {
+    descriptionRow <- sum(descriptionRow + 1) # skip to next row
+    description <- article[[descriptionRow[1]]]
+  }
+  
+  # Skipping row another time, just to be sure
+  if(nchar(description) < 70) {
+    descriptionRow <- sum(descriptionRow + 1) # skip to next row
+    description <- article[[descriptionRow[1]]]
+  }
+  
+  # if descriptionRow is before the 5th, it's not a plot
+  if(descriptionRow < 5) {
+    description <- NA
+  }
+  
+  return(list(
+    title = title,
+    year = year,
+    actors = actors,
+    directors = directors,
+    country = country,
+    language = language,
+    description = description
+  ))
+}
+```
+
+As you saw, we scraped the data from the Wikipedia body article and, when getting a missing value, we tried to get the data from its infobox (when existing). We used some "tricks" to avoid getting the warning messages or image description into the `description` variable.
+
+Note that the function takes only the first paragraph of the article plot section. This is not really a problem as it often describes the main character as he/she appears first or gives a general summary of the movie.
+
+Okay, let's try our function on the first link.
+
+```{r}
+str(moviesData(urls[1]))
+```
+
+In order to scrape the 1700 wikilinks and build a single dataset of 7 variables, we will use an elegant code written by Giora in [another post](http://giorasimchoni.com/2017/10/08/2017-10-08-sign-of-the-times/) of his blog.
+
+```{r}
+movies <- tibble(
+  title = character(0),
+  year = integer(0),
+  actors = character(0),
+  directors = character(0),
+  country = character(0),
+  language = character(0),
+  description = character(0)
+  )
+
+getMoviesData <- function(i) {
+  cat(i, " ")
+  movie <- tryCatch(
+    read_html(str_c("https://en.wikipedia.org", urls[i])) %>%
+      moviesData(),
+    error = function(e) NULL
+  )
+  movies <<- rbind.data.frame(movies, movie, stringsAsFactors = FALSE)
+}
+
+# walk(1:length(urls), getMoviesData)
+# write_csv(movies, "input/movies.csv")
+```
+
+```{r}
+movies <- read_csv("input/movies.csv")
+
+glimpse(movies)
+```
+
+Nice! But how good our function performed?
+
+Let's have a look on the pourcentage of missing values by variable.
+
+```{r}
+round(100*colMeans(is.na(movies)), 2)
+```
+
+And what about the NAs repartition into the dataset?
+
+```{r chart_childrensmovies_1}
+library(Amelia)
+
+missmap(movies, main = paste0("Visualising missing data (n=", nrow(movies),")"))
+```
+
+We will remove some missing values from our dataset. One hard choice is to take away all the NAs of the `description` variable, as we will lose 10% of our movies. However, we can think that a movie without a description of the plot probably isn't that important or influental. And, above all, the accuracy of our predictive model will be greatly improved.
+
+```{r}
+# Removing some duplicated movies
+movies <- movies[!duplicated(movies[,c("title", "year")]),]
+# Removing NAs titles
+movies <- movies[!is.na(movies$title),]
+# Removing NAs description
+movies <- movies[!is.na(movies$description),]
+
+dim(movies)
+```
+
+We now have a dataset of 1452 children's movies.
+
+On last thing before moving on. The Wikipedia article warns us that it "*deals primarily with the United States and do not represent a worldwide view of the subject*". Let's check that.
+
+```{r}
+movies$country %>%
+  str_detect("United States|US") %>%
+  sum(., na.rm = TRUE)
+```
+
+Yes, 77 % of the children's movies are US-related.
+
+## Mimicking Giora's Code
+
+Following Giora's post, we have to manually tag a sample of our children's movies dataset according to the gender of the central character, where `0` is "Female", `1` is "Male", and `2` is "Other" (meaning it is hard to decide which gender is central). I did it for the first 140 movies, which represents 10% of the `movies` dataset[^2].
+
+```{r}
+classFirst140 <- c(
+  0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 
+  0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 0, 1, 1, 1, 0, 1, 1, 2, 1, 1, 
+  1, 1, 2, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 
+  2, 1, 1, 1, 0, 1, 1, 1, 1, 2, 0, 1, 1, 2, 1, 1, 1, 1, 0, 1, 
+  1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 2, 1, 1, 1, 0, 1, 1, 
+  1, 2, 1, 0, 0, 0, 1, 0, 0, 1, 2, 1, 2, 1, 1, 1, 1, 1, 1, 2, 
+  0, 1, 2, 0, 1, 0, 1, 0, 0, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1, 1
+)
+movies$class <- c(classFirst140, rep(NA, nrow(movies) - 140))
+# write_csv(movies, "output/movies_mod.csv")
+
+paste("Year of the last movie coded:", movies$year[140])
+```
+
+Just as Giora, coding the *first* movies is problematic. Since it's not a random sample, its representativity of the other movies is questionable. Is it even more the case in our study, as all the movies are old. The game here is code reproducibility. We will try to "compensate" that afterwards.
+
+What is the gender distribution of the first 140 movies according to my judgement?
+
+```{r}
+movies %>%
+  select(class) %>%
+  count(class) %>%
+  mutate(total = sum(n), p = n / total)
+```
+
+As the "Other" class belongs both to the "Male" and "Female" classes, the ratio is `(89 + 16)/(35 + 16) = 2.06`. In other words, for every children's movie with a female central character, two are centered around a male character.
+
+## Preparing the Machine
+
+Since we want to make gender prediction, knowing if the first name of a character is "male" or "female" is informative. Giora scraped 1000 male and 1000 female names from the [Babble](https://www.babble.com/pregnancy/1000-most-popular-boy-names/) website.
+
+```{r}
+boys <- "https://www.babble.com/pregnancy/1000-most-popular-boy-names/"
+boysNames <- read_html(boys) %>%
+  html_nodes("li") %>%
+  html_text() %>%
+  .[22:1021]
+
+girls <- "https://www.babble.com/pregnancy/1000-most-popular-girl-names/"
+girlsNames <- read_html(girls) %>%
+  html_nodes("li") %>%
+  html_text() %>%
+  .[22:1021]
+
+boysGirlsNames <- data.frame(cbind(boysNames, girlsNames))
+```
+
+Giora used boy and girl names in order to know if the author and the title contains a "Male" or "Female" name. For our case study, it can be done for the directors and actors names. Potential predicators for the "Other" class are features like a title containing the word "the" or a high level of plural words.
+
+```{r}
+library(magrittr)
+
+getNBoysGirlsNames <- function(s, boys, firstToken) {
+  namesPattern <- if (boys) {
+    str_c(boysGirlsNames$boysNames, collapse = "\\b|\\b")
+  } else {
+    str_c(boysGirlsNames$girlsNames, collapse = "\\b|\\b")
+  }
+  s2 <- if (firstToken) {
+    str_split(s, " ")[[1]][1]
+  } else {
+    s
+  }
+  str_count(s2, namesPattern)
+}
+
+getNPluralWords <- function(s) {
+  sum(str_detect(str_split(s, " ")[[1]], "[A-Za-z]+s$"))
+}
+
+isStringStartsWithThe <- function(s) {
+  as.numeric(startsWith(s, "The"))
+}
+
+movies <- movies %>%
+  mutate(i_nBoysInBookDesc = map_dbl(description, getNBoysGirlsNames, TRUE, FALSE),
+         i_nGirlsInBookDesc = map_dbl(description, getNBoysGirlsNames, FALSE, FALSE),
+         i_nBoysInBookTitle = map_dbl(title, getNBoysGirlsNames, TRUE, FALSE),
+         i_nGirlsInBookTitle = map_dbl(title, getNBoysGirlsNames, FALSE, FALSE),
+         i_gapBoysGirlsBookDesc = i_nBoysInBookDesc - i_nGirlsInBookDesc,
+         i_gapBoysGirlsTitle = i_nBoysInBookTitle - i_nGirlsInBookTitle,
+         i_lengthTitle = map_dbl(title, nchar),
+         i_lengthBookDesc = map_dbl(description, nchar),
+         i_nPluralWordsInBookTitle = map_dbl(title, getNPluralWords),
+         i_titleStartsWithThe = map_dbl(title, isStringStartsWithThe))
+```
+
+For our case study, other predictors can be built. Since the central character is often listed first in the Wikipedia articles, let's see if the first name is a boy or a girl name. We can also sum up the gender-related pronoms of the movie description in variables.
+
+-   Is the first name of the first actor listed "male" or "female"?
+-   Is the first name of the first director listed "male" or "female"?
+-   How many "he" and "him" in the description?
+-   How many "she" and "her" in the description?
+-   How many "they" and "them" in the description?
+
+```{r}
+movies$actorFirstName <- movies$actors %>%
+  sub(" .*", "",.)
+
+movies$directorFirstName <- movies$directors %>%
+  sub(" .*", "",.)
+
+getNHeHim <- function(s) {
+  nHe <- sum(str_detect(str_split(s, " ")[[1]], "\\bhe\\b"))
+  nHim <- sum(str_detect(str_split(s, " ")[[1]], "\\bhim\\b"))
+  nHeHim <- nHe + nHim
+}
+
+getNSheHer <- function(s) {
+  nShe <- sum(str_detect(str_split(s, " ")[[1]], "\\bshe\\b"))
+  nHer <- sum(str_detect(str_split(s, " ")[[1]], "\\bher\\b"))
+  nSheHer <- nShe + nHer
+}
+
+getNTheyTheir <- function(s) {
+  nThey <- sum(str_detect(str_split(s, " ")[[1]], "\\bthey\\b"))
+  nTheir <- sum(str_detect(str_split(s, " ")[[1]], "\\btheir\\b"))
+  nTheyTheir <- nThey + nTheir
+}
+
+movies <- movies %>%
+  mutate(i_BoyActorFirstName = map_dbl(actors, getNBoysGirlsNames, TRUE, TRUE),
+         i_GirlActorFirstName = map_dbl(actors, getNBoysGirlsNames, FALSE, TRUE),
+         i_BoyDirectorFirstName = map_dbl(directors, getNBoysGirlsNames, TRUE, TRUE),
+         i_GirlDirectorFirstName = map_dbl(directors, getNBoysGirlsNames, FALSE, TRUE),
+         i_NHeHis = map_dbl(description, getNHeHim),
+         i_NSheHer = map_dbl(description, getNSheHer),
+         i_NTheyTheir = map_dbl(description, getNTheyTheir))
+
+movies %<>% filter(nchar(description) > 100)
+```
+
+Like Giora, we can create a `type` variable in preparation of the machine learning stage, by splitting the dataset in three categories (i.e. "train", "test", and "other").
+
+```{r}
+nTagged <- sum(table(movies$class))
+trainFrac <- 0.8 # Giora used 0.9
+set.seed(2) # added for reproducibility 
+trainSample <- sample(nTagged, floor(nTagged * trainFrac))
+movies %<>%
+  mutate(id = row_number(),
+         type = ifelse(row_number() %in% trainSample, "train",
+                       ifelse(row_number() %in% 1:nTagged, "test", "other")))
+```
+
+Lastly, it is time to work on the `description` variable.
+
+```{r}
+library(tidytext)
+
+dataForModeling <- movies %>%
+  unnest_tokens(word, description, drop = FALSE) %>%
+  count(id, word, sort = TRUE) %>% 
+  #don't anti_join stop_words because 'her' and 'him' are there!
+  cast_dtm(id, word, n, weighting = tm::weightTf) %>%
+  tm::removeSparseTerms(0.997) %>% # from 0.999
+  as.matrix() %>%
+  as.data.frame() %>%
+  rownames_to_column("id") %>%
+  mutate(id = as.numeric(id)) %>%
+  rename(class1 = class, type1 = type) %>%
+  inner_join(movies %>%
+               select(id, starts_with("i_"), class, type), "id")
+
+nonWordColIdx <- c(1, which(str_detect(colnames(dataForModeling), "i_")),
+                   ncol(dataForModeling) - 1,
+                   ncol(dataForModeling))
+bkDescWords <- colnames(dataForModeling)[-nonWordColIdx]
+colnames(dataForModeling)[-nonWordColIdx] <- str_c("word", 1:length(bkDescWords))
+
+# write_csv(dataForModeling, "output/dataForModeling.csv")
+
+dim(dataForModeling)
+```
+
+As you saw, the `description` variable has been [tokenized](https://en.wikipedia.org/wiki/Lexical_analysis#Tokenization) and transformed in a sparse [document-term Matrix](https://en.wikipedia.org/wiki/Document-term_matrix) that keeps only the tokens appearing in at least 4 different movie descriptions[^3].
+
+Using the `type` column made earlier, let's split the data into training and testing datasets.
+
+```{r}
+train <- dataForModeling %>%
+  filter(type == "train") %>%
+  select(-type)
+
+test <- dataForModeling %>%
+  filter(type == "test") %>%
+  select(-type)
+```
+
+## Machine Learning with {xgboost}
+
+Following Giora, we will use [Gradient-Boosted-Trees](https://en.wikipedia.org/wiki/Gradient_boosting) to perform a multiclass logistic classification with {xgboost}. Then, we will see which features of the model are the most important.
+
+```{r}
+library(xgboost)
+
+train_matrix <- xgb.DMatrix(data = as.matrix(train[,-c(1, ncol(train))]), label = train$class)
+test_matrix <- xgb.DMatrix(data = as.matrix(test[, -c(1, ncol(test))]), label = test$class)
+
+nClasses <- 3
+xgb_params <- list("objective" = "multi:softprob",
+                   "eval_metric" = "mlogloss",
+                   "num_class" = nClasses)
+nround    <- 50
+
+xgboostModel <- xgb.train(params = xgb_params, data = train_matrix, nrounds = nround)
+
+# xgb.save(xgboostModel, "output/xgboost_model")
+
+names <-  colnames(train[,-c(1, ncol(train))])
+importance_matrix <- xgb.importance(feature_names = names, model = xgboostModel)
+head(importance_matrix, 10) %>%
+  left_join(tibble(Feature = colnames(dataForModeling)[-nonWordColIdx], word = bkDescWords), "Feature") %>%
+  select(word, Feature, Gain)
+```
+
+Just as Giora's case study, "her" and "his" are the most important splits used to build the XGBoost trees. It is now time to make a confusion matrix in order to estimate the performance of our model.
+
+```{r}
+test_pred <- predict(xgboostModel, newdata = test_matrix)
+
+labelNumToChar <- function(n) {
+  ifelse(n == 1, "Female",
+         ifelse(n == 2, "Male", "Other"))
+}
+
+test_prediction <- matrix(test_pred, nrow = nClasses,
+                          ncol=length(test_pred)/nClasses) %>%
+  t() %>%
+  data.frame() %>%
+  mutate(labelN = test$class + 1,
+         predN = max.col(., "last"),
+         maxProb = pmap_dbl(list(X1, X2, X3), max),
+         predN_strict = ifelse(maxProb > 0.75, predN, 3),
+         label = map_chr(labelN, labelNumToChar),
+         label = factor(label),
+         pred = map_chr(predN, labelNumToChar),
+         pred = factor(pred))
+
+caret::confusionMatrix(test_prediction$pred,
+                       test_prediction$label)
+```
+
+The classification model has a accuracy of 71%. Althought our model is quite good at classifying the "Female" and "Male" classes, it fails to predict the "Other" class. How can it be explained?
+
+One can think that the first 140 movies we manually coded where strongly "genderized", i.e. the movies up until 1960 were centered mainly on a single character. Indeed, we only tagged 16 movies as "Other". The sample could be too small for the machine to "learn" how to recognize it.
+
+Another explanation could be that when a man and a woman are both the main characters of a movie, the man often takes more space in the movie and therefore its description. Indeed, [an recent study](https://pudding.cool/2017/03/film-dialogue/) showed that men speak generally more than women in the movies, especially in the old ones.
+
+We learned from the confusion matrix that most of the "Other" tend to be "Male". A quick look at the description of the movies tagged as "Other" confirms that men are more present in the text. So let's simply recode all the `2` as `1` and rerun all the script that led us to this stage of the analysis in order to try a binary logistic classification.
+
+```{r}
+movies_2 <- read_csv("output/movies_mod.csv")
+
+# Recoding all 2 to 1
+movies_2$class[movies_2$class == 2] <- 1
+# then running the exact same code with the new "movies_2" dataset
+set.seed(22) # changing random sample (previously set.seed(2))
+# ...
+movies_2$actorFirstName <- movies_2$actors %>%
+  sub(" .*", "",.)
+
+movies_2$directorFirstName <- movies_2$directors %>%
+  sub(" .*", "",.)
+
+movies_2 <- movies_2 %>%
+  mutate(i_nBoysInBookDesc = map_dbl(description, getNBoysGirlsNames, TRUE, FALSE),
+         i_nGirlsInBookDesc = map_dbl(description, getNBoysGirlsNames, FALSE, FALSE),
+         i_nBoysInBookTitle = map_dbl(title, getNBoysGirlsNames, TRUE, FALSE),
+         i_nGirlsInBookTitle = map_dbl(title, getNBoysGirlsNames, FALSE, FALSE),
+         i_gapBoysGirlsBookDesc = i_nBoysInBookDesc - i_nGirlsInBookDesc,
+         i_gapBoysGirlsTitle = i_nBoysInBookTitle - i_nGirlsInBookTitle,
+         i_lengthTitle = map_dbl(title, nchar),
+         i_lengthBookDesc = map_dbl(description, nchar),
+         i_nPluralWordsInBookTitle = map_dbl(title, getNPluralWords),
+         i_titleStartsWithThe = map_dbl(title, isStringStartsWithThe))
+
+movies_2 %<>% filter(nchar(description) > 100)
+
+nTagged <- sum(table(movies_2$class))
+trainFrac <- 0.8 # Giora used 0.9
+set.seed(2) # added for reproducibility 
+trainSample <- sample(nTagged, floor(nTagged * trainFrac))
+movies_2 %<>%
+  mutate(id = row_number(),
+         type = ifelse(row_number() %in% trainSample, "train",
+                       ifelse(row_number() %in% 1:nTagged, "test", "other")))
+
+library(tidytext)
+
+dataForModeling_2 <- movies_2 %>%
+  unnest_tokens(word, description, drop = FALSE) %>%
+  count(id, word, sort = TRUE) %>% 
+  #don't anti_join stop_words because 'her' and 'him' are there!
+  cast_dtm(id, word, n, weighting = tm::weightTf) %>%
+  tm::removeSparseTerms(0.997) %>% # from 0.999
+  as.matrix() %>%
+  as.data.frame() %>%
+  rownames_to_column("id") %>%
+  mutate(id = as.numeric(id)) %>%
+  rename(class1 = class, type1 = type) %>%
+  inner_join(movies_2 %>%
+               select(id, starts_with("i_"), class, type), "id")
+
+nonWordColIdx <- c(1, which(str_detect(colnames(dataForModeling_2), "i_")),
+                   ncol(dataForModeling_2) - 1,
+                   ncol(dataForModeling_2))
+bkDescWords <- colnames(dataForModeling_2)[-nonWordColIdx]
+colnames(dataForModeling_2)[-nonWordColIdx] <- str_c("word", 1:length(bkDescWords))
+
+# write_csv(dataForModeling_2, "output/dataForModeling_2.csv")
+dim(dataForModeling_2)
+
+train_2 <- dataForModeling_2 %>%
+  filter(type == "train") %>%
+  select(-type)
+
+test_2 <- dataForModeling_2 %>%
+  filter(type == "test") %>%
+  select(-type)
+
+library(xgboost)
+
+train_matrix_2 <- xgb.DMatrix(data = as.matrix(train_2[,-c(1, ncol(train_2))]), label = train_2$class)
+
+test_matrix_2 <- xgb.DMatrix(data = as.matrix(test_2[, -c(1, ncol(test_2))]), label = test_2$class)
+
+xgb_params_2 <- list("objective" = "binary:logistic") # binary classification
+nround <- 50
+
+xgboostModel_2 <- xgb.train(params = xgb_params_2, data = train_matrix_2, nrounds = nround)
+
+# xgb.save(xgboostModel_2, "output/xgboostModel_2")
+
+test_pred_2 <- predict(xgboostModel_2, newdata = test_matrix_2)
+
+names_2 <-  colnames(train_2[,-c(1, ncol(train_2))])
+importance_matrix_2 <- xgb.importance(feature_names = names_2, model = xgboostModel_2)
+head(importance_matrix_2, 10) %>%
+  left_join(tibble(Feature = colnames(dataForModeling_2)[-nonWordColIdx], word = bkDescWords), "Feature") %>%
+  select(word, Feature, Gain)
+```
+
+```{r}
+# Making a confusion matrix is much easier with a binary classification
+pred_class_2 <- ifelse(test_pred_2 > 0.75, 1, 0) # 0.75 as compensation of "Male" overrating
+
+labelNumToChar_2 <- function(n) {
+  ifelse(n == 0, "Female", "Male")
+}
+
+test_prediction_2 <- matrix(test_2$class, nrow = 1, 
+                           ncol = length(test_2$class)) %>%
+  t() %>%
+  data.frame() %>%
+  mutate(predN = test_pred_2,
+         label = map_chr(test_2$class, labelNumToChar_2),
+         label = factor(label),
+         pred = map_chr(pred_class_2, labelNumToChar_2),
+         pred = factor(pred))
+
+caret::confusionMatrix(test_prediction_2$pred,
+                       test_prediction_2$label)
+```
+
+Our predictive model performed much better, with an accuracy of 82%. But it tends to classify the movies more as "Male" than as "Female". This is a direct result of our recoding decision. We need to keep that in mind for later on. We also notice that the most important features used to build the decision trees are quite similar to the ones of the previous model.
+
+## Two different answers
+
+It's finally time to visualize the distribution of the gender ratio over the years. We will use almost the same script for the two models and compare their predictions.
+
+```{r}
+train_matrix <- xgb.DMatrix(data = as.matrix(rbind(train, test)[,-c(1, ncol(train))]),
+                            label = c(train$class, test$class))
+xgboostModelAll <- xgb.train(params = xgb_params,
+                             data = train_matrix,
+                             nrounds = nround)
+
+unknown <- dataForModeling %>%
+  filter(type == "other") %>%
+  select(-type)
+
+unknown_matrix <- xgb.DMatrix(data = as.matrix(unknown[, -c(1, ncol(unknown))]))
+
+unknown_pred <- predict(xgboostModelAll, newdata = unknown_matrix)
+
+unknown_prediction <- matrix(unknown_pred, nrow = nClasses,
+                             ncol=length(unknown_pred)/nClasses) %>%
+  t() %>%
+  data.frame() %>%
+  mutate(predN = max.col(., "last"),
+         maxProb = pmap_dbl(list(X1, X2, X3), max),
+         predN_strict = ifelse(maxProb > 0.75, predN, 3),
+         pred = map_chr(predN, labelNumToChar))
+
+First139Labels <- movies %>%
+  filter(type != "other") %>%
+  select(class) %>%
+  transmute(label = map_chr(class, labelNumToChar)) %>%
+  unlist()
+
+movieClasses <- c(unknown_prediction$pred, First139Labels)
+table(movieClasses) # overall gender ratio
+```
+
+```{r chart_childrensmovies_2}
+movies %<>% mutate(class = movieClasses)
+
+library(hrbrthemes)
+movies %>%
+  group_by(year, class) %>%
+  count(class) %>%
+  ggplot(aes(x = year, y = n, color = class)) +
+  geom_line() +
+  scale_color_discrete(name = "Gender") +
+  labs(x = "", y = "number of movies",
+       title = "Gender centrality in children's movies",
+       caption = "Model accuracy: 0.72 | Data source: Wikipedia") + 
+  theme_ipsum() 
+```
+
+Why is the number of "Female" and "Other" suddenly higher than "Male" since 2013? Are the children's movies more feminists then they were a few years ago? Let's see if this pattern also appears in our binary classification model.
+
+```{r chart_childrensmovies_3}
+train_matrix_2 <- xgb.DMatrix(data = as.matrix(rbind(train_2, test_2)[,-c(1, ncol(train_2))]),
+                            label = c(train_2$class, test_2$class))
+xgboostModelAll_2 <- xgb.train(params = xgb_params_2,
+                             data = train_matrix_2,
+                             nrounds = nround)
+
+unknown_2 <- dataForModeling_2 %>%
+  select(-type)
+
+unknown_matrix_2 <- xgb.DMatrix(data = as.matrix(unknown_2[, -c(1, ncol(unknown_2))]))
+
+unknown_pred_2 <- predict(xgboostModelAll_2, newdata = unknown_matrix_2)
+
+movies_2 %<>% 
+  mutate(class = ifelse(unknown_pred_2 > 0.75, 1, 0),
+         class_2 = map_chr(class, labelNumToChar_2))
+
+movies_2 %>%
+  group_by(year, class_2) %>%
+  count(class_2) %>%
+  ggplot(aes(x = year, y = n, color = class_2)) +
+  geom_line() +
+  scale_color_discrete(name = "Gender") +
+  labs(x = "", y = "number of movies",
+       title = "Central Character Gender in Children's Movies",
+       caption = "Model accuracy: 0.82 | Data source: Wikipedia") +
+  theme_ipsum()
+```
+
+Apparently no. However, as said before, our second model overclassifies the "Male" category. The reality is probably in between the two models: there are more central female characters but still far away from gender equality[^4].
+
+## FIN
+
+Predicting the gender of central characters in children's movie isn't an easy task, especially when using almost 100-years old movies. The predictions could have been different if I had chosen to code the last 140 movies of our dataset.
+
+Anyway, this was without doubt the longer post I've published on my blog... and the first using machine learning! I've learned a lot and had so much fun.
+
+Thank you Giora!
+
+
+[^1]: Giora could have implemented that very easily, but chose not to because he wanted to respond to a specific question, as explained in his concluding remarks.
+
+[^2]: In his post, Giora coded 200 movies (equivalent to 5.4% of this dataset).
+
+[^3]: Giora explains in more detail what his code does in [his post](http://giorasimchoni.com/2017/09/24/2017-09-24-where-my-girls-at/).
+
+[^4]: To know for sure if the trend is reversing, we could simply code manually the `class` variable since 2013. If anyone has the motivation to do this task, I would be pleased to know your finding.
