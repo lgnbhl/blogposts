@@ -3,6 +3,9 @@ title: "Can you Guess a Cuisine from its Ingredients?"
 excerpt: "Building classification models to predict dish's cuisines from recipe ingredients."
 date: "30/06/2018"
 author: "Felix Luginbuhl"
+output: 
+  html_document:
+    code_folding: "hide"
 ---
 
 ```{r setup, include=FALSE}
