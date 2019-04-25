@@ -1,0 +1,364 @@
+---
+title: "Do the Rich Countries Always Win?"
+subtitle: "Making regression models to explore the relationship between the HDI and the medals won during the Winter Olympics Games."
+date: "13/03/2018"  
+author: "Felix Luginbuhl"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+# install.packages(c("broom", "countrycode", "ggimage", "ggthemes", "plotly", "pscl", "readxl", "reshape2", "rvest", "tidyverse"))
+```
+
+![](input/image_wo_medals.png)
+
+Like most of us, I watched the Olympics Winter Games. But after seeing the [medal table](https://www.pyeongchang2018.com/en/game-time/results/OWG2018/en/general/medal-standings.htm), I had the impression that the richer a country was, the more medals he got. But was it really the case? And if yes, to what extent?
+
+Before exploring these questions with R, we firstly need to choose a metric to classify the participating nations from the richer to the poorer. As Norway, Germany and Canada are the most medaled countries of the 2018 Winter Olympics, the Human Development Index (HDI) is clearly a better choice than the GDP.
+
+In this article, we will answer two questions:
+
+-   Is the number of medals won by each country during the Winter Olympics Games strongly correlated with its Human Development Index? (simple linear regression)
+-   Is the Human Development Index a good predictor to know if a country will win more than a certain amount of medals? (binary logistic regression)
+
+We will therefore show how to use simple models for exploratory data analysis.
+
+## Scraping the data
+
+The [Human Development Index](https://en.wikipedia.org/wiki/Human_Development_Index) is an indicator developed by the United Nations Development Programme since 1990. It goes further than the GDP per capita by combining it with life expectancy and education.
+
+We can get the data from selected years directly from the UNDP website. The indicator exists only for the years 1990, 2000, 2010 and then each year until 2015. Let's select the closest years from each Winter Olympic Games.
+
+If you are not interested in the scraping part, just skip this chapter.
+
+```{r}
+library(tidyverse)
+library(magrittr)
+library(rvest)
+library(readxl)
+
+url_hdi <- "http://hdr.undp.org/sites/default/files/composite_tables/2016_Statistical_Annex_Table_2.xls"
+
+# download.file(url = url_hdi, destfile = "hdi_all.xls")
+hdi <- read_excel(path = "input/hdi_all.xls", skip = 4)
+
+hdi_tidy <- hdi %>%
+  select(Country = 2, "1990", "2000", "2010", "2014", "2015") %>%
+  na.omit() %>% # remove only subtitles of the Excel file
+  gather("HDI_Year", "HDI", 2:6) %>%
+  mutate(HDI = as.numeric(HDI), # ".." of rows converted as NA
+         HDI_Year = as.numeric(HDI_Year),
+         Country = recode(Country,
+                          "Russian Federation" = "Russia",
+                          "Korea (Republic of)" = "South Korea",
+                          "United Kingdom" = "Great Britain"))
+
+print(hdi_tidy)
+```
+
+Now, we will scrape the number of medals by country since the Winter Olympics of 1992 from Wikipedia.
+
+```{r}
+getMedals <- function(i) {
+  url <- paste0("https://en.wikipedia.org/wiki/", i, "_Winter_Olympics_medal_table")
+  
+  medals <- url %>%
+    read_html() %>%
+    html_node(".wikitable") %>%
+    html_table(fill = TRUE)
+  
+  colnames(medals)[2] <- "Country"
+  colnames(medals)[6] <- "nMedals"
+  medals$Country <- medals$Country %>%
+    gsub(".{6}$", "", .) # https://stackoverflow.com/questions/23413331
+
+  medals$Country <- stringr::str_trim(medals$Country) # remove space from host country
+  medals$WO_Year <- i
+  medals <- medals[-nrow(medals),] # remove last row
+  
+  return(medals)
+  }
+
+wo_years <- c(1992, 1994, 1998, 2002, 2006, 2010, 2014, 2018)
+
+medals <- map_dfr(wo_years, getMedals) %>%
+  as_tibble() %>%
+  mutate(Country = recode(Country, "Olympic Athletes from Russia" = "Russia"))
+
+# write_csv(medals, "input/medals.csv")
+
+print(medals)
+```
+
+Lastly, we will join our two datasets.
+
+```{r}
+dataset <- medals %>% 
+  full_join(hdi_tidy, by = "Country") %>%
+  drop_na(nMedals) # remove country with no medals
+
+print(dataset)
+```
+
+We got a missing value from the [Unified Team](https://en.wikipedia.org/wiki/Unified_Team_at_the_1992_Winter_Olympics) because no HDI is related to it. Which other countries have missing values in our dataset?
+
+```{r}
+na_rows <- which(is.na(dataset$HDI))
+dataset$Country[na_rows]
+```
+
+Only 13 rows have missing values! Surprisingly the United Nations don't have a HDI for Liechtenstein in 1990.
+
+Before working on the regression models, let’s just have a look at the medal table of 2018, by number medal for the top 10 countries.
+
+```{r}
+data_medals <- dataset %>%
+  filter(WO_Year == 2018, 
+         HDI_Year == 2015) %>%
+  filter(Rank == c(1:10)) %>%
+  select(Rank, Country, Gold, Silver, Bronze) %>%
+  reshape2::melt(id.vars = c("Rank", "Country")) %>%
+  set_colnames(c("Rank", "Country", "Medal", "Number")) %>%
+  mutate(Rank = as.numeric(Rank)) %>%
+  filter(!(Number == 0))
+
+library(countrycode)
+library(ggimage)
+set.seed(20)
+
+data_medals %>%
+  mutate(iso2 = countrycode(data_medals$Country, "country.name", "iso2c")) %>%
+  ggplot(aes(x = fct_reorder(Country, Rank, .desc = T), y = Number)) +
+  geom_jitter(aes(fill = Medal), pch = 21, size = 5, width = 0.15, height = 0) +
+  ggimage::geom_flag(y = -0.5, aes(image = iso2)) +
+  scale_fill_manual(values = c("gold", "grey", "sienna"), name = NULL) +
+  scale_y_continuous(breaks = c(1:14)) +
+  coord_flip() +
+  expand_limits(y = -0.5) +
+  ggthemes::theme_economist_white() +
+  theme(plot.background = element_rect(fill = "#f8f2e4"),
+        legend.background = element_blank(),
+        legend.key = element_blank()) +
+  labs(x = NULL, y = "Number of medals",
+       title = "2018 Winter Olympics Medals Table",
+       caption = "Félix Luginbühl (@lgnbhl)\nData source: Wikipedia")
+```
+
+## Linear regressions
+
+Let’s beginn with a simple linear regression with the variables `nMedals` and `HDI` for the 2018 Winter Olympics Games.
+
+```{r}
+library(broom)
+
+wo_2018 <- dataset %>%
+  filter(WO_Year == 2018, HDI_Year == 2015)
+
+# cor(wo_2018$nMedals, wo_2018$HDI) ## 0.46
+model_2018 <- lm(nMedals ~ HDI, data = wo_2018)
+glance(model_2018)
+```
+
+```{r}
+library(ggthemes)
+
+wo_2018 %>%
+  mutate(HDI = round(HDI, 2)) %>%
+  ggplot(aes(nMedals, HDI, label = Country)) +
+  geom_point() +
+  geom_text(data = filter(wo_2018, Country %in% c("China", "Russia", "Australia")), 
+            aes(label = Country), nudge_y = 0.01) +
+  geom_smooth(method = lm, se = F, color = "brown1") +
+  geom_smooth(method = loess, se = F, color = "brown4", linetype = "dashed") +
+  theme_economist_white() +
+  theme(plot.background = element_rect(fill = "#f8f2e4")) +
+  annotate("text", x = 36, y = 0.92, label = "R ^ 2 == 0.21", parse = TRUE) +
+  labs(x = "Number of medals", y = "Human Development Index",
+       title = "Do the Rich Countries Always Win?",
+       subtitle = "Number of medals vs. Human Development Index, 2018 Winter Olympics",
+       caption = "Félix Luginbühl (@lgnbhl)\nData source: Wikipedia")
+```
+
+Our model has a coefficient of determination (or R-squared) of `0.21`, with a p-value of `0.01`. The R-squared means that 21% of the variation of the `nMedals` can be explained by the variation of the `HDI`. It is quite low but not that bad given the fact that we are using only one predictor.
+
+Let's take a closer look at the plot. We can learn two things. Firstly, the countries having won more than three medals have all a HDI higher than 0.87. Secondly, being a big and ambitious country (like China or Russia) or not having a strong ski culture (like Australia) could potentially be good predictors.
+
+It would be interesting to know which point corresponds to which country. To do so, we can easily make our plot interactive using {plotly}.
+
+```{r}
+library(plotly)
+ggplotly() %>%
+  style(hoverinfo = "none", traces = 3:4)
+```
+
+Our visualization is now interactive! 
+
+The ```ggplotly``` function kept our theme. We only lost the subtitle and the caption of our previous plot.
+
+We only visualized the year 2018. How is the correlation between our two variables for each Winter Olympics year since 1992?
+
+```{r}
+wo_years <- c(1992, 1994, 1998, 2002, 2006, 2010, 2014, 2018)
+hdi_years <- c(1990, 1990, 2000, 2000, 2010, 2010, 2014, 2015)
+
+getModels <- function(i, j) {
+  
+  olympic <- dataset %>%
+    filter(WO_Year == i, HDI_Year == j)
+  
+  model <- lm(nMedals ~ HDI, data = olympic)
+  model_metrics <- glance(model)
+  model_metrics$WO_Year <- i
+  model_metrics <- model_metrics %>%
+    select(WO_Year, r.squared, adj.r.squared, p.value)
+  
+  return(model_metrics)
+  }
+
+map2_dfr(wo_years, hdi_years, getModels)
+```
+
+This is a surprise!
+
+Linear regressions show that the Human Development Index is increasingly significant to explain the number of medals won by each country during the Winter Olympics Games since 1992.
+
+Just for curiosity, how better is our model without taking into account China and Russia in 2018?
+
+```{r}
+wo_2018_2 <- wo_2018 %>%
+  filter(Country != c("Russia", "China"))
+
+model_2018_2 <- lm(nMedals ~ HDI, data = wo_2018_2)
+glance(model_2018_2) %>% select(r.squared, adj.r.squared, p.value)
+```
+
+The model without China and Russia explains one third (33%) of the variability and is statistically significant (p-value < 0.0015).
+
+However, maybe countries having won less than 3 medals have often a HDI lower than 0.86? It is therefore time to try a binary logistic regression.
+
+## Logistic regression
+
+Our previous model didn't take into account the countries which haven't won any medals. This is a bias we need to study now.
+
+Let's scrape all the countries which participated to the Winter Olympics since 1992.
+
+```{r}
+url_wiki2 <- "https://en.wikipedia.org/w/index.php?title=List_of_participating_nations_at_the_Winter_Olympic_Games&oldid=827837541"
+
+noc_all <- url_wiki2 %>%
+    read_html() %>%
+    html_node(".wikitable") %>%
+    html_table(fill = TRUE)
+
+# write_csv(noc_all, "input/noc_all.csv")
+
+noc_all2 <- noc_all %>%
+  select(Country = A, "92", "94", "98", "02", "06", "10", "14", "18") %>%
+  gather("WO_Year", "Value", 2:9) %>%
+  mutate(Value = recode(Value, 
+                        "•" = "1", 
+                        "EUN" = "1", # Unified Team of 1992
+                        "H" = "1", # Host country
+                        "OAR" = "1")) # Olympic Athletes from Russia
+
+noc_all2$Value[noc_all2$Value == ""] <- 0
+noc_all2$Value <- as.numeric(noc_all2$Value) # Make NA Value which aren't 0 or 1
+
+row_az <- which(nchar(noc_all2$Country) == 1) # get alphabetical order row
+noc_all2$Country[row_az] <- NA # make alphabetical order row NA
+noc_all2 <- drop_na(noc_all2, Country) # remove alphabetical order row
+
+# Additional cleaning
+noc_all2$Country <- noc_all2$Country %>%
+  gsub("\\[|\\^]|\\›]", "", .) %>%
+  stringr::str_trim()
+noc_part <- noc_all2 %>% filter(Value == 1)
+
+noc_part %>% 
+  filter(WO_Year == 18) %>%
+  tibble()
+```
+
+For which countries can we find missing values?
+
+```{r}
+na_rows2 <- which(is.na(noc_all2$Value))
+noc_all2$Country[na_rows2]
+```
+
+Makes sense!
+
+We will now build a logistic regression. In other words, we will model the probability that a country has won more than 3 medals during the 2018 Winter Olympics Games according to its HDI.
+
+```{r}
+noc_hdi_2018 <- noc_part %>%
+  full_join(hdi_tidy, by = "Country") %>%
+  filter(Value == 1) %>%
+  filter(WO_Year == 18) %>%
+  filter(HDI_Year %in% c(2015, NA))
+
+# Which countries don't have a HDI ?
+noc_hdi_2018 %>% filter(HDI_Year %in% NA)
+```
+
+```{r}
+wo_2018$Binary <- wo_2018$nMedals > 3 # more than 3 medals
+
+dataset2 <- noc_hdi_2018 %>%
+  full_join(wo_2018, by = c("Country", "HDI")) %>%
+  select(Country, HDI, nMedals, Binary)
+
+# Missing value means no medals
+dataset2$nMedals[is.na(dataset2$nMedals)] <- 0
+dataset2$Binary[is.na(dataset2$Binary)] <- FALSE
+dataset2$Binary <- dataset2$Binary*1 # from logical to numeric 
+
+model_2 <- glm(Binary ~ HDI, data = dataset2, family = "binomial")
+glance(model_2)
+```
+
+```{r}
+# Pseudo R-squareds for logistic regression
+library(pscl)
+pR2(model_2)
+```
+
+```{r}
+ggplot(dataset2, aes(HDI, Binary, label = Country)) +
+  geom_point() +
+  geom_smooth(method = "glm", method.args = list(family = "binomial"),
+              se = FALSE, color = "brown1") +
+  annotate("text", x = 0.88, y = 0.78, size = 3, label = "McFadden's pseudo R-squared = 0.33") +
+  theme_economist_white() +
+  theme(plot.background = element_rect(fill = "#f8f2e4")) +
+  labs(title = "Do the Rich Countries Always Win?",
+       subtitle = "Wining more than 3 medals vs. Human Development Index, 2018 Winter Olympics",
+       x = "Human Development Index",
+       y = "Probability of wining more than 3 medals",
+       caption = "Félix Luginbühl (@lgnbhl)\n Data source: Wikipedia")
+```
+
+In our visualization, we can notice once again the two countries, i.e. China and Russia, which are classified as `1` (won more than 3 medals) while having a HDI higher than 0.87. Our binary classification reveals that some countries with a HDI higher than 0.87 have won less than 4 medals. Which are they?
+
+```{r}
+dataset2 %>% 
+  filter(Binary == 0, HDI > 0.87) %>%
+  arrange(desc(HDI))
+```
+
+These twelve countries call for other predictors in order to improve our models. This won’t be done here as it goes beyond our initial questions.
+
+## Conclusion
+
+Our first model (a simple linear regression) showed that China and Russia are the only two countries with a Human Development Index (HDI) smaller than 0.87 which have won more than 3 medals during the 2018 Winter Olympics Games. 
+
+Then we built linear regressions for each Winter Olympics Games since 1992 and saw that the HDI is increasingly significant. 
+
+Lastly, our logistic regression revealed that twelve countries with a HDI higher than 0.87 have won less than 4 medals and called for the use of new predictors.
+
+Thanks for reading. For updates of recent blog posts, [follow me on Twitter](https://twitter.com/lgnbhl).
