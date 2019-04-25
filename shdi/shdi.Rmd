@@ -1,0 +1,313 @@
+---
+title: "The Evolution of Regional Inequalities Around the World"
+subtitle: "An interactive exploration of global human development disparities over the years."
+date: "07/04/2019"
+author: "Felix Luginbuhl"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+[![](/images/screenshot_shdi-app.png)](https://lgnbhl.shinyapps.io/shdi/){:target="_blank"}
+
+Last month *Nature* published [a paper](https://www.nature.com/articles/sdata201938) introducing new data on regional human development across the globe. The Subnational Human Development Index (SHDI) Database contains data on 1625 regions of 161 countries, covering all regions and development levels of the world. It provides their Human Development Index with related indicators.
+
+I couldn't resist to have a look at this new database and try some exploratory analysis. 
+
+But first, let me remind you very quickly what is the Human Development Index (HDI).
+
+## What does HDI stand for?
+
+As [explained](http://hdr.undp.org/en/content/human-development-index-hdi) by the UNDP, *the Human Development Index (HDI) is a summary measure of average achievement in key dimensions of human development: a long and healthy life, being knowledgeable and have a decent standard of living*. In other words, it is people and their capabilites that should be the criteria for assessing the development of a country, not economic growth alone.
+
+As one (good) image worths thousands of words, just have a look at the picture below that shows how the Human Development Index is constructed.
+
+![](https://upload.wikimedia.org/wikipedia/en/2/2b/HDI_explained_the_best_way.png)
+
+To learn more about how the autors constructed this new database (and its limitations), you can read the [paper](https://www.nature.com/articles/sdata201938) written by Jeroen Smits and Iñaki Permanyer.
+
+Okay. Let's directly dive into the exploratory data analysis!
+
+## Interactive world maps
+
+I wanted to begin by creating an interactive world map of the human development disparities around the world. As all the variables looked interesting to map, I thought: would it be great to choose any indicator and year of the dataset, so we can visualize more than one hundred maps? With Shiny we can:[^1]
+
+[^1]: As interactivity is computation heavy, I removed it for the app. Note also that some countries are missing (mainly in the Middle East) due to missing values in the dataset.
+
+```{r}
+# Fixing encoding for future issue
+Sys.setlocale("LC_ALL","C")
+
+# loading required R packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, sf, tmap, srvyr, plotly, gganimate, quantreg, countrycode, hrbrthemes, knitr)
+```
+
+```{r}
+# downloading data
+url_shdi <- "https://globaldatalab.org/assets/2019/03/SHDI-Complete%20SD1.csv"
+url_labels <- "https://globaldatalab.org/assets/2019/03/SHDI-SD1-Vardescription.csv"
+url_shp <- "https://globaldatalab.org/assets/2018/07/GDL-SHDI-SHP-2.zip"
+url_code <- "https://globaldatalab.org/assets/2018/06/GDL-Codes.xlsx"
+
+# dir.create("input")
+# dir.create("output")
+# download.file(url_shdi, destfile = "input/shdi.csv")
+# download.file(url_labels, destfile = "input/labels.csv")
+# download.file(url_shp, destfile = "input/gdl.zip")
+rm(url_shdi, url_labels, url_shp)
+# unzip(zipfile = "input/gdl.zip", exdir = "input/GDL")
+# file.remove("input/gdl.zip")
+```
+
+```{r}
+df <- read_csv("input/shdi.csv")
+shp <- st_read("input/GDL/GDL-SHDI-SHP-2.shp")
+
+data <- shp %>%
+  #  full_join doesn't work with sf objects, left_join instead
+  left_join(df) # some NAs generated, in particular in Middle East countries
+```
+
+```
+# below is the RMD file used to build the Flexdashboard Shiny app.
+---
+title: "The Subnational Human Development Database"
+resource_files:
+- input/shdi.csv
+- input/GDL/
+runtime: shiny
+output: 
+  flexdashboard::flex_dashboard:
+    social: menu
+    theme: flatly
+---
+
+``` r
+library(shiny)
+library(readr)
+library(dplyr)
+library(sf)
+library(tmap)
+
+df <- read_csv("input/shdi.csv")
+shp <- st_read("input/GDL/")
+
+data <- shp %>%
+  left_join(df)
+```
+
+Sliders {.sidebar}
+-----------------------------------------------------------------------
+
+```r
+choicesSHDI = c("Sub-national HDI" = "shdi",  "Health index" = "healthindex", "Income index" = "incindex", "Educational index" = "edindex", "Life expectancy" = "lifexp", "Log GNI per capital" = "lgnic", "Expected years schooling" = "esch", "Mean years schooling" = "msch")
+      
+selectInput("index", label = "Indicator:", choices = choicesSHDI)
+
+selectInput("year", label = "Year:",
+            choices = c(min(df$year, na.rm = T):max(df$year, na.rm = T)), 
+            selected = max(df$year, na.rm = T))
+
+# extra space
+tags$br() 
+tags$br() 
+tags$br()
+```
+
+Column
+-----------------------------------------------------------------------
+
+### World map
+
+``` r
+renderPlot({
+  data %>%
+    filter(year == input$year) %>%
+    tm_shape() +
+    tm_polygons(input$index, id = "region", palette = "RdYlBu", title = "Index",
+                n = 10, # groups are automatically adjusted
+                border.col = "black", border.alpha = 0.5) +
+    tm_basemap(leaflet::providers$CartoDB.PositronNoLabels, group = "CartoDB basemap") +
+    tm_tiles(leaflet::providers$CartoDB.PositronOnlyLabels, group = "CartoDB labels") +
+    tm_layout(title = paste(names(which(choicesSHDI == input$index)), ",", input$year),
+              title.position = c("center", "top")) +
+    tm_credits(text = "Félix Luginbühl - Data source: globaldatalab.org")
+})
+```
+```
+
+<iframe seamless src="https://lgnbhl.shinyapps.io/shdi/" width="100%" height="850" frameborder="0"></iframe>
+
+If you want to play with this simple Web app in full screen, [click here](https://lgnbhl.shinyapps.io/shdi/){:target="_blank"}.
+
+## Regional disparities within continents over time
+
+Exploring the dataset reminded me the famous (and funny) presentation of Hans Rosling:
+
+<div style="max-width:854px"><div style="position:relative;height:0;padding-bottom:56.25%"><iframe src="https://embed.ted.com/talks/lang/en/hans_rosling_shows_the_best_stats_you_ve_ever_seen" width="854" height="480" style="position:absolute;left:0;top:0;width:100%;height:100%" frameborder="0" scrolling="no" allowfullscreen></iframe></div></div><br>
+
+I want to compare the evolution over the years of regional HDI relatively to the national HDI by continent, using a graphic inspired by the first one presented by Hans Rosling.
+
+```{r}
+df_continent <- df %>%
+  full_join(df %>% # add national HDI variable
+              filter(level == "National") %>%
+              select(iso_code, year, hdi_national = shdi),
+            by = c("iso_code", "year")) %>%
+  mutate(continent = countrycode(iso_code, "iso3c", "continent")) %>% # add continent variable
+  mutate(continent = ifelse(country == "Kosovo", "Europe", continent)) %>% # fix Kosovo
+  filter(level != "National")
+
+gg_continent <- df_continent %>%
+  ggplot(aes(hdi_national, shdi, frame = year, size = pop, colour = continent)) +
+  geom_point(aes(text = paste("country:", country, "\nregion:", region)), alpha = 0.5) +
+  scale_colour_brewer(palette = "Set1") +
+  scale_size(range = c(2, 8)) +
+  expand_limits(x = 0, y = 0) +
+  geom_abline(intercept = 0 , slope = 1, alpha = 0.6, linetype = "longdash") +
+  guides(size = "none") +
+  theme_ipsum(caption_face = "plain") +
+  labs(title = "Regional Human Development Disparities",
+       subtitle = "Regions by continent, year: {frame_time}", 
+       x = "National HDI", y = "Regional HDI",
+       caption = "Félix Luginbühl (@lgnbhl) - Data source: globaldatalab.org")
+
+ggplotly(gg_continent) %>%
+  animation_opts(1500, easing = "elastic", redraw = FALSE)
+```
+
+Click on the `Play` button to launch the animation.
+
+Here how to read the visualization:
+
+- Each point is a region. 
+- The size of each point/region is related to its population. 
+- The regions below the dashed line have a lower level of human development that their national HDI (regions above the line have human development level higher than the national median). 
+- The more disparate the points are, the more regional disparities there is within countries and continents.
+
+Sadly we can observe important inequalities in terms of human development around the world.
+
+Let's have a closer look at the subnational HDI disparities within continents using a classic statistical dispersition measures: the [interquartile range](https://en.wikipedia.org/wiki/Interquartile_range) (IQR). The IQR is equal to the difference between 75th and 25th percentiles, or between the first quartile (25% of the population) and the third quartile (75% of the population). 
+
+An important note here. The interquartile range of each country be computed by weighting each regional HDI by its population and scaled. If weighting the regions is essential, I decided not to scale the data (it is a complexe task and I don't want to spend a reasonable amount of time on this analysis) and because the authors [explained](https://www.nature.com/articles/sdata201938) that *the amount of scaling* [in the database] *is relatively small (i.e. near the ‘no-scaling’ value of one)*. The following graphics should therefore be taken with some cautions, as the median SHDI by country weighted by the population computed in the code below is not always equal to the national HDI (as it should be).
+
+Keeping this note of caution in mind, what are the interquartile ranges by year in Africa?
+
+```{r}
+# Computer heavy:
+df_weighted <- df %>% # remove national level
+  filter(level != "National") %>% # remove national level
+  srvyr::as_survey_design(weights = pop) %>% # weighting regions by its population
+  group_by(year, country, iso_code) %>%
+  summarise(quantile = srvyr::survey_quantile(shdi, c(0.25, 0.5, 0.75))) %>%
+  ungroup() %>%
+  as_tibble() %>%
+  mutate(interquartile = round(quantile_q75 - quantile_q25, 3)) %>%
+  mutate(continent = countrycode(iso_code, "iso3c", "continent")) %>%
+  mutate(continent = ifelse(country == "Kosovo", "Europe", continent)) # fix Kosovo
+
+# write_csv(df_weighted, path = "output/df_weighted.csv")
+# df_weighted <- read_csv("output/df_weighted.csv")
+
+gg_weighted_africa <- df_weighted %>%
+  filter(continent == "Africa") %>%
+  mutate(IQR = interquartile*100) %>% #percentile
+  ggplot() +
+  geom_line(aes(x = year, y = IQR, color = country)) +
+  hrbrthemes::theme_ipsum(caption_face = "plain") +
+  labs(y = "IQR weighted by pop",
+       title = "Difference 75th-25th Percentiles in Human Development, Africa")
+
+plotly::ggplotly(gg_weighted_africa)
+```
+
+In 2017, Cameroon has an HDI interquartile range of 0.196 (equal to 19.6 percentile). It means that the first quartile of its population has a HDI lower than 19.6 percentile than the third quarter of its population. In other words, it reflects high disparities of HDI amoung its regions. In the contrary, Libya has the lowest HDI disparities within its main regions according to our dataset.
+
+What about the evolution of European regional HDI disparities since 1990?
+
+```{r}
+gg_weighted_europe <- df_weighted %>%
+  filter(continent == "Europe") %>%
+  mutate(IQR = interquartile*100) %>% #percentile
+  ggplot(aes(x = year, y = IQR, color = country)) +
+  geom_line() +
+  hrbrthemes::theme_ipsum(caption_face = "plain") +
+  labs(y = "IQR weighted by pop",
+       title = "Difference 75th-25th Percentiles in Human Development, Europe")
+
+plotly::ggplotly(gg_weighted_europe)
+```
+
+## Zoom on selected countries
+
+Now let's have a closer look at the sub-national disparities within selected countries. We will select the countries having the highest regional HDI ever (and having more than 4 different regions within the dataset) and visualize the evolution of regional disparities over the years using boxplot.
+
+Have a look at the [Wikipedia article](https://en.wikipedia.org/wiki/Box_plot) on the boxplot if you don't remember how to interprete them. Basically, the bigger the box is, the more regional disparities there are in a country[^2].
+
+[^2]: Note again than as our data is note scaled, the shdi mean weighted by the population of each country isn't always equal to the official HDI calculated by the UNDP. Note also that the box represents the interquartile range (IQR).
+
+```{r}
+# Top 10 highest differences between shdi within countries, all time
+## Keep in mind that we have missing data for some Middle east countries
+top10_highest_diff <- df %>%
+  group_by(country, year) %>%
+  filter(n_distinct(shdi) > 4) %>% # at least 4 different subnational regions within country
+  mutate(shdi_diff = max(shdi) - min(shdi)) %>%
+  distinct(country, iso_code, year, shdi_diff) %>%
+  arrange(desc(shdi_diff)) %>% 
+  group_by(country) %>% 
+  distinct(country, .keep_all = TRUE) %>%
+  ungroup() %>%
+  slice(1:10) %>%
+  .$country
+
+animated_boxplots <- function(selected_countries){
+  gg <- df %>%
+    filter(level != "National") %>%
+    transform(country = forcats::fct_reorder(country, shdi)) %>%
+    filter(country %in% selected_countries) %>%
+    ggplot(aes(country, shdi)) + 
+    geom_boxplot(aes(weight = pop, frame = year)) + 
+    #geom_point(data = df %>%
+                 #filter(country %in% selected_countries,
+                        #level == "National"),
+               #aes(factor(country), shdi, frame = year,
+                   #color = "National HDI"), size = 3, shape = 17) +
+    scale_color_brewer(palette = "Set1") +
+    coord_flip() +
+    hrbrthemes::theme_ipsum(caption_face = "plain") +
+    labs(x = "", y = "Regional HDI",
+         caption = "Félix Luginbühl (@lgnbhl) - Data source: globaldatalab.org")
+  
+  ggplotly(gg) %>%
+   animation_opts(1000, easing = "elastic")
+}
+
+animated_boxplots(top10_highest_diff) %>%
+  layout(title = "Top 10 Highest Subnational HDI Differences (weighted by pop)")
+```
+
+What about the ten countries having the highest national HDI in 2017?
+
+```{r}
+top10_HDI <- df %>%
+  filter(level == "National",
+         year == 2017) %>%
+  arrange(desc(shdi)) %>%
+  slice(1:10) %>%
+  .$country
+
+animated_boxplots(top10_HDI) %>%
+  layout(title = "Regional Disparities Within Top HDI Countries (weighted by pop)")
+```
+
+Even the countries that have the best human development grades seem to have strong regional disparities. Ireland made an impressive move up in the HDI ranking. Switzerland and Sweden have notable low regional disparities over the years.
+
+We only scratch the surface of the insights we can get from the Subnational Human Development Index Database. I hope you found this quick exploratory data analysis instructive. Don't hesitate to write me below or on [LinkedIn](https://www.linkedin.com/in/felixluginbuhl) if you have any question/comment.
+
+Thanks for reading. For updates of recent blog posts, follow me on [Twitter](https://twitter.com/lgnbhl).
+
+*[UNDP]: United Nations Development Programme

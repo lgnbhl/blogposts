@@ -1,0 +1,16 @@
+Variable,Category,Dtype,Decimals,Label,Shortdescr,Longdescr
+iso_code,System,Str,,,ISO country code 3 digit,ISO country code 3 digit
+country,System,Str,,,Country name,Country name
+year,System,Int,0,,Year of data collection,Year of data collection
+GDLCODE,System,Str,,,Region code Global Data Lab,"Iso-code, level (t=total), regional division (1=most important), region number"
+level,System,Str,,,Aggregation level,National or sub-national
+region,System,Str,,,Sub-national region name,Name of sub-national region
+shdi,Indices,Pos,3,Sub-national HDI,Sub-national HDI,
+healthindex,Indices,Pos,3,Health index,Health index,
+incindex,Indices,Pos,3,Income index,Income index,
+edindex,Indices,Pos,3,Educational index ,Educational index ,
+lifexp,Indicators,Pos,2,Life expectancy,Life expectancy,Life expectancy at birth
+lgnic,Indicators,Pos,3,Log Gross National Income per capita,Log Gross National Income per capita,Log Gross National Income per capita
+esch,Indicators,Pos,2,Expected years schooling,Expected years schooling,Expected years schooling children aged 6
+msch,Indicators,Pos,2,Mean years schooling,Mean years schooling,Mean years schooling population aged 25+
+pop,Indicators,Pos,2,Population size in thousands,Population size in thousands,Population size in thousands
