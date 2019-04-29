@@ -16,6 +16,11 @@ knitr::opts_chunk$set(
 )
 # install.packages(c("DT", "ggthemes", "tidyr", "tidyverse", "wordcloud", "SnowballC", "tidytext", "tm", "caret", "h2o", "rpart.plot", "rsample", "xgboost"))
 # dir.create("input") # dir.create("output")
+
+###########################################################
+# RSTUDIO CLOUD DOESN'T GIVE ENOUGH RAM TO RUN THE SCRIPT #
+###########################################################
+
 ```
 
 Cooking is sometimes used as a metaphor for data preparation in
