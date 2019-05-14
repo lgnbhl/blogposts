@@ -12,7 +12,7 @@ knitr::opts_chunk$set(
 	message = FALSE,
 	warning = FALSE
 )
-# install.packages(c("broom", "countrycode", "ggimage", "ggthemes", "plotly", "pscl", "readxl", "reshape2", "rvest", "tidyverse"))
+# install.packages(c("broom", "gvlma", "countrycode", "ggimage", "ggthemes", "plotly", "pscl", "readxl", "reshape2", "rvest", "tidyverse"))
 ```
 
 ![](input/image_wo_medals.png)
@@ -116,7 +116,7 @@ Only 13 rows have missing values! Surprisingly the United Nations don't have a H
 
 Before working on the regression models, let’s just have a look at the medal table of 2018, by number medal for the top 10 countries.
 
-```{r}
+```{r olympics_nMedals}
 data_medals <- dataset %>%
   filter(WO_Year == 2018, 
          HDI_Year == 2015) %>%
@@ -151,67 +151,62 @@ data_medals %>%
 
 ## Linear regressions
 
-Let’s beginn with a simple linear regression with the variables `nMedals` and `HDI` for the 2018 Winter Olympics Games.
+Let's beginn by visualizing the relationship between the variables `nMedals` and `HDI` for the 2018 Winter Olympics Games.
 
-```{r}
-library(broom)
-
-wo_2018 <- dataset %>%
-  filter(WO_Year == 2018, HDI_Year == 2015)
-
-# cor(wo_2018$nMedals, wo_2018$HDI) ## 0.46
-model_2018 <- lm(nMedals ~ HDI, data = wo_2018)
-glance(model_2018)
-```
-
-```{r}
+```{r olympics_lm}
 library(ggthemes)
 
-wo_2018 %>%
+dataset %>%
+  filter(WO_Year == 2018, HDI_Year == 2015) %>%
   mutate(HDI = round(HDI, 2)) %>%
   ggplot(aes(nMedals, HDI, label = Country)) +
   geom_point() +
-  geom_text(data = filter(wo_2018, Country %in% c("China", "Russia", "Australia")), 
+  geom_text(data = . %>% filter(WO_Year == 2018, 
+                                HDI_Year == 2015,
+                                Country %in% c("China", "Russia", "Australia")), 
             aes(label = Country), nudge_y = 0.01) +
-  geom_smooth(method = lm, se = F, color = "brown1") +
-  geom_smooth(method = loess, se = F, color = "brown4", linetype = "dashed") +
+  geom_smooth(method = lm, se = F, color = "brown2") +
   theme_economist_white() +
   theme(plot.background = element_rect(fill = "#f8f2e4")) +
-  annotate("text", x = 36, y = 0.92, label = "R ^ 2 == 0.21", parse = TRUE) +
   labs(x = "Number of medals", y = "Human Development Index",
        title = "Do the Rich Countries Always Win?",
        subtitle = "Number of medals vs. Human Development Index, 2018 Winter Olympics",
        caption = "Félix Luginbühl (@lgnbhl)\nData source: Wikipedia")
 ```
 
-Our model has a coefficient of determination (or R-squared) of `0.21`, with a p-value of `0.01`. The R-squared means that 21% of the variation of the `nMedals` can be explained by the variation of the `HDI`. It is quite low but not that bad given the fact that we are using only one predictor.
+We can observe that China and Russia are not well explained by a linear regression.
 
-Let's take a closer look at the plot. We can learn two things. Firstly, the countries having won more than three medals have all a HDI higher than 0.87. Secondly, being a big and ambitious country (like China or Russia) or not having a strong ski culture (like Australia) could potentially be good predictors.
-
-It would be interesting to know which point corresponds to which country. To do so, we can easily make our plot interactive using {plotly}.
+However, in order to complete all the assumptions required to run a linear regression, we need to make a logarithmic transformation of the number of medals variable.
 
 ```{r}
-library(plotly)
-ggplotly() %>%
-  style(hoverinfo = "none", traces = 3:4)
+library(gvlma)
+
+wo_2018 <- dataset %>%
+  filter(WO_Year == 2018, HDI_Year == 2015) %>%
+  mutate(nMedals_log = log(nMedals))
+
+mod_2018 <- lm(nMedals_log ~ HDI, data = wo_2018)
+
+gvmodel <- gvlma(mod_2018)
+
+summary(gvmodel)
 ```
-
-Our visualization is now interactive! 
-
-The ```ggplotly``` function kept our theme. We only lost the subtitle and the caption of our previous plot.
 
 We only visualized the year 2018. How is the correlation between our two variables for each Winter Olympics year since 1992?
 
 ```{r}
+library(broom)
+
 wo_years <- c(1992, 1994, 1998, 2002, 2006, 2010, 2014, 2018)
 hdi_years <- c(1990, 1990, 2000, 2000, 2010, 2010, 2014, 2015)
 
 getModels <- function(i, j) {
   
   olympic <- dataset %>%
-    filter(WO_Year == i, HDI_Year == j)
+    filter(WO_Year == i, HDI_Year == j) %>%
+    mutate(nMedals_log = log(nMedals))
   
-  model <- lm(nMedals ~ HDI, data = olympic)
+  model <- lm(nMedals_log ~ HDI, data = olympic)
   model_metrics <- glance(model)
   model_metrics$WO_Year <- i
   model_metrics <- model_metrics %>%
@@ -225,19 +220,31 @@ map2_dfr(wo_years, hdi_years, getModels)
 
 This is a surprise!
 
-Linear regressions show that the Human Development Index is increasingly significant to explain the number of medals won by each country during the Winter Olympics Games since 1992.
+Linear regressions show that the Human Development Index is increasingly significant to explain the number of medals won by each country during the Winter Olympics Games since 1992. However, we can observe that the HDI is only statistically significant to explain the number of medals in 2014 and 2018 (p-value < 0.05).
 
-Just for curiosity, how better is our model without taking into account China and Russia in 2018?
+Do any of these models doesn't complete the assumptions of a linear regression?
 
 ```{r}
-wo_2018_2 <- wo_2018 %>%
-  filter(Country != c("Russia", "China"))
+getAssumptions <- function(i, j) {
+  
+  olympic <- dataset %>%
+    filter(WO_Year == i, HDI_Year == j) %>%
+    mutate(nMedals_log = log(nMedals))
+  
+  model <- lm(nMedals_log ~ HDI, data = olympic)
+  gvmodel <- gvlma(model)
+  gvmodel <- summary(gvmodel)
+  
+  return(gvmodel)
+  }
 
-model_2018_2 <- lm(nMedals ~ HDI, data = wo_2018_2)
-glance(model_2018_2) %>% select(r.squared, adj.r.squared, p.value)
+model_assumptions <- map2_df(wo_years, hdi_years, getAssumptions)
+
+model_assumptions %>%
+  count(Decision)
 ```
 
-The model without China and Russia explains one third (33%) of the variability and is statistically significant (p-value < 0.0015).
+All our models have acceptable assumptions for running linear regressions.
 
 However, maybe countries having won less than 3 medals have often a HDI lower than 0.86? It is therefore time to try a binary logistic regression.
 
@@ -328,7 +335,7 @@ library(pscl)
 pR2(model_2)
 ```
 
-```{r}
+```{r olympics_glm}
 ggplot(dataset2, aes(HDI, Binary, label = Country)) +
   geom_point() +
   geom_smooth(method = "glm", method.args = list(family = "binomial"),
