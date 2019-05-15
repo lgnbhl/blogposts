@@ -192,6 +192,8 @@ gvmodel <- gvlma(mod_2018)
 summary(gvmodel)
 ```
 
+Our model has a coefficient of determination (or R-squared) of `0.19`, with a p-value of `0.01`. The R-squared means that around 20% of the variation of the `nMedals` can be explained by the variation of the `HDI`. It is quite low but not that bad given the fact that we are using only one predictor.
+
 We only visualized the year 2018. How is the correlation between our two variables for each Winter Olympics year since 1992?
 
 ```{r}
