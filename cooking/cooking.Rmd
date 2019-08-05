@@ -518,7 +518,7 @@ start_time_h2o <- Sys.time()
 
 aml <- h2o.automl(x = predictors, 
                   y = target, 
-                  training_frame = training_h2o,
+                  training_frame = train_h2o,
                   leaderboard_frame = valid_h2o,
                   balance_classes = TRUE,
                   max_runtime_secs = as.numeric(time_sec),
