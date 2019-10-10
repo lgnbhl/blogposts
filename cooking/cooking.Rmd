@@ -104,6 +104,27 @@ dataset %>%
        caption = "Félix Luginbühl (@lgnbhl)\nData source: Kaggle, Yummly")
 ```
 
+We see important outliers in each cuisine.
+
+Another way of comparing the variation of the number of ingredients per recipe by cuisine is to calculate the coefficient of variation (CV)[^1] of each cuisine.
+
+[^1]: the sample standard deviation should not be used as the mean varies according to the cuisine.
+
+```{r}
+library(raster)
+
+dataset %>%
+  filter(type == "train") %>%
+  group_by(id, cuisine) %>%
+  summarise(n = n()) %>%
+  group_by(cuisine) %>%
+  summarise(mean = mean(n),
+            cv = cv(n)) %>%
+  arrange(desc(cv))
+```
+
+We see that the Brazilian cuisine have much more variation (CV of 58.3%) than the Chinese cuisine (CV of 33.7%) relative to their means.
+
 How many unique ingredients do we have in the dataset?
 
 ```{r}
@@ -140,6 +161,8 @@ DT::datatable(
   rownames = FALSE,
   caption = "Top 10 Ingredients by Cuisine")
 ```
+
+This table will lead us, in the feature engineering step, to count the number of ingredients “typical” from different cultural regions.
 
 ## Preparing the Data
 
