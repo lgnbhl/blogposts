@@ -1,18 +1,22 @@
 ---
 title: "The Evolution of Regional Inequalities Around the World"
 subtitle: "An interactive exploration of global human development disparities over the years."
-date: "07/04/2019"
 author: "Felix Luginbuhl"
+date: 2019-04-07
 output: 
   html_document:
     code_folding: "hide"
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
 ```
 
-[![](/images/screenshot_shdi-app.png)](https://lgnbhl.shinyapps.io/shdi/){:target="_blank"}
+[![](https://raw.githubusercontent.com/lgnbhl/lgnbhl.github.io/master/images/screenshot_shdi-app.png)](https://lgnbhl.shinyapps.io/shdi/)
 
 Last month *Nature* published [a paper](https://www.nature.com/articles/sdata201938) introducing new data on regional human development across the globe. The Subnational Human Development Index (SHDI) Database contains data on 1625 regions of 161 countries, covering all regions and development levels of the world. It provides their Human Development Index with related indicators.
 
@@ -42,7 +46,7 @@ I wanted to begin by creating an interactive world map of the human development 
 # Fixing encoding for future issue
 Sys.setlocale("LC_ALL","C")
 
-# loading required R packages
+# loading required R packages p_load = install.packages + library
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load(tidyverse, sf, tmap, srvyr, plotly, gganimate, quantreg, countrycode, hrbrthemes, knitr)
 ```
@@ -141,9 +145,9 @@ renderPlot({
 ```
 ```
 
-<iframe seamless src="https://lgnbhl.shinyapps.io/shdi/" width="100%" height="850" frameborder="0"></iframe>
+[![](https://raw.githubusercontent.com/lgnbhl/lgnbhl.github.io/master/images/screenshot_shdi-app.png)](https://lgnbhl.shinyapps.io/shdi/)
 
-If you want to play with this simple Web app in full screen, [click here](https://lgnbhl.shinyapps.io/shdi/){:target="_blank"}.
+If you want to play with this simple Web app [click here](https://lgnbhl.shinyapps.io/shdi/){:target="_blank"}.
 
 ## Regional disparities within continents over time
 
@@ -264,7 +268,7 @@ top10_highest_diff <- df %>%
   distinct(country, .keep_all = TRUE) %>%
   ungroup() %>%
   slice(1:10) %>%
-  .$country
+  pull(country)
 
 animated_boxplots <- function(selected_countries){
   gg <- df %>%
@@ -300,7 +304,7 @@ top10_HDI <- df %>%
          year == 2017) %>%
   arrange(desc(shdi)) %>%
   slice(1:10) %>%
-  .$country
+  pull(country)
 
 animated_boxplots(top10_HDI) %>%
   layout(title = "Regional Disparities Within Top HDI Countries (weighted by pop)")
