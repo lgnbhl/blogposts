@@ -1,0 +1,247 @@
+---
+title: "Exploring Switzerland Official Datasets"
+subtitle: "Introducing my new R package {BFS}"
+author: "Felix Luginbuhl"
+date: "2019-11-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+```{r include=FALSE}
+dir.create("inputs")
+dir.create("outputs")
+```
+
+The [Swiss Federal Statistical Office](https://www.bfs.admin.ch/bfs/en/home.html), or BFS from "Bundesamt für Statistik" in German, provides a rich public database. As Swiss citizen and R enthousiast, I wanted to easily access its datasets directly from R. So I created the [BFS](https://felixluginbuhl.com/BFS/) package.
+
+In this article, I will show how to use my `BFS` package to easily search and download datasets from the Swiss Federal Statistical Office. We will then quickly explore a dataset and plot a map of Swiss municipalities, the lowest level of administrative division in Switzerland.
+
+As always the code is fully reproductible, so you can get if from [Github](https://github.com/lgnbhl/blogposts) and run it on you own computer or on my online [RStudio Cloud](https://rstudio.cloud/project/673254) session.
+
+## Getting the data
+
+To use my `BFS` package, we should begin by downloading information related to all available datasets of the Swiss Federal Statistical Office Catalogue. We can get the BFS metadata in German ("de"), French ("fr"), Italian ("it") and English ("en")[^1].
+
+[^1]: English and Italian have less datasets available.
+
+```{r}
+# install/load needed R packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, scales, colorspace, plotly, RSwissMaps, BFS)
+
+# setting light theme
+theme_set(theme_light())
+
+# Get BFS metadata in German
+meta_de <- bfs_get_metadata(language = "de")
+meta_de
+```
+
+We currently have access to 676 BFS datasets.
+
+The challenge today is to plot a detailed map of Switzerland containing all 2'212 Swiss municipalites, or "gemeinde" in German. How many current BFS datasets contain the word "gemeinde" in their title? Let's find out using the `bfs_search()` function.
+
+```{r}
+meta_de_gemeinde <- bfs_search("gemeinde", data = meta_de)
+meta_de_gemeinde
+```
+
+We got 34 different datasets related to Swiss municipalities. I am interested by the one related to the cross-border worker ("Ausländische Grenzgänger/innen" in German) at the first row. Let's download it using the `bfs_get_dataset()` function.
+
+```{r}
+# browseURL(meta_de_gemeinde$url[1]) # open related webpage
+meta_de_gemeinde$title[1] # print title
+meta_de_gemeinde1 <- bfs_search("Ausländische Grenzgänger/innen nach Geschlecht und Arbeitsgemeinde", 
+                                meta_de_gemeinde)
+
+data_bfs <- bfs_get_dataset(meta_de_gemeinde1$url_px[1])
+data_bfs
+```
+
+Note that the developing version of `BFS` leverage the new `pins` package to save all the downloaded Swiss datasets in the same cache folder, accessible using the `bfs_open_dir()` function.
+
+That's all for my new `BFS` package.
+
+## Exploring the data
+
+Using the [Tidyverse](https://www.tidyverse.org/) workflow, we can now performe a quick exploratory data analysis.
+
+Let's begin with a glimpse of the data.
+
+```{r}
+glimpse(data_bfs)
+```
+
+The dataset contains information about the number of cross-border worker by quarter (`quartal`), Swiss municipality (`arbeitsgemeinde`) and gender (`geschlecht`).
+
+Notice that `value` is a pondered value: each worker get a weighted point between 0-1 according to the number of our of works he/she is doing (see more [here](https://www.bfs.admin.ch/bfs/de/home/statistiken/arbeit-erwerb/erhebungen/ggs.html)). It is therefore more appropriate to speak about "cross-bording work" as the value of two men working half time in a Swiss municipality is equal to a full time cross-border working woman.
+
+I am curious to learn more about the gender ratio of cross-border work by municipality and its evolution over the years. Let's build a new `gender_ratio` variable.
+
+```{r}
+data_bfs_ratio <- data_bfs %>%
+  tidyr::pivot_wider(names_from = "geschlecht", values_from = "value") %>%
+  rename(quarter = quartal, 
+         municipality = arbeitsgemeinde,
+         man = Mann, woman = Frau, 
+         gender_total = `Geschlecht - Total`) %>%
+  mutate(municipality = str_remove_all(municipality, "\\.|^\\- ")) %>% # cleaning
+  mutate(gender_ratio = man / gender_total * 100) %>%
+  arrange(desc(quarter))
+
+data_bfs_ratio
+```
+
+We see that the gender ratio of cross-border workers for the 2nd quarter of 2019 in Switzerland is 64.2% (but 73% in Zürich).
+
+Does it mean we have strong cantonal gender disparities in terms of cross-border work?
+
+```{r swiss-data_cantonal_gender_ratio}
+# Create table to join later to bfs_data
+# ref: https://en.wikipedia.org/wiki/Data_codes_for_Switzerland#Cantons
+cantons <- tibble::tribble(
+  ~canton, ~code, ~id_can,
+  "Aargau", "AG", 19,
+  "Appenzell Innerrhoden", "AI", 15,
+  "Appenzell Ausserrhoden", "AR", 16,
+  "Bern", "BE", 2,
+  "Basel-Landschaft", "BL", 13,
+  "Basel-Stadt", "BS", 12,
+  "Fribourg", "FR", 10,
+  "Genève", "GE", 25,
+  "Glarus", "GL", 8,
+  "Graubünden", "GR", 18,
+  "Jura", "JU", 26,
+  "Luzern", "LU", 3,
+  "Neuchâtel", "NE", 24,
+  "Nidwalden", "NW", 7,
+  "Obwalden", "OW", 6,
+  "St Gallen", "SG", 17,
+  "Schaffhausen", "SH", 14,
+  "Solothurn", "SO", 11,
+  "Schwyz", "SZ", 5,
+  "Thurgau", "TG", 20,
+  "Ticino", "TI", 21,
+  "Uri", "UR", 4,
+  "Vaud", "VD", 22,
+  "Valais", "VS", 23,
+  "Zug", "ZG", 9,
+  "Zürich", "ZH", 1,
+)
+
+data_bfs_ratio_annualized <- data_bfs_ratio %>%
+  mutate(year = str_extract(quarter, "^.{4}"),
+         year = as.numeric(year)) %>%
+  group_by(municipality, year) %>%
+  summarise(gender_ratio_annualized = mean(gender_ratio, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(gender_per = gender_ratio_annualized/100)
+
+data_bfs_ratio_annualized %>%
+  inner_join(cantons, by = c("municipality" = "canton")) %>% # join table
+  ggplot(aes(x = year, y = gender_per, color = code)) +
+  geom_line() +
+  geom_line(data = filter(data_bfs_ratio_annualized, municipality == "Schweiz"),
+             color = "red2", linetype = "dashed", size = 1) +
+  scale_y_continuous(label = percent) +
+  annotate("text", x = 2016, y = 0.54, size = 3.5, label = "National gender ratio") +
+  geom_segment(aes(x = 2016, y = 0.551, xend = 2016, yend = 0.635), 
+               color = "black", size = 0.2, 
+               arrow = arrow(length = unit(0.2, "cm"))) +
+  labs(title = "Gender Ratio of Cross-Bording Work",
+       subtitle = "Switzerland, 1995-2019",
+       color = "Canton",
+       x = "", y = "",
+       caption = "quarter annualized - Data source: BFS")
+```
+
+It looks like we have different gender ratio levels according to the Swiss canton. However, it is hard to see clearly and to categorise the cantons by group. 
+
+Let's make a time serie clustering to get the categories. I will reuse some code of the excellent [blogpost](https://www.brodrigues.co/blog/2019-10-12-cluster_ts/) of Bruno Rodrigues to perform a time-series k-means clustering.
+
+```{r swiss-data_n_clust}
+set.seed(1111)
+
+# Only since 2007 as missing values before for some cantons
+data_bfs_wide <- data_bfs_ratio_annualized %>%
+  inner_join(cantons, by = c("municipality" = "canton")) %>% # join table
+  filter(year > 2006) %>%
+  select(municipality, year, gender_ratio_annualized) %>%
+  pivot_wider(names_from = year, values_from = gender_ratio_annualized)
+
+wss <- map_dbl(1:6, ~{kmeans(select(data_bfs_wide, -municipality), .)$tot.withinss})
+
+elbow_df <- as.data.frame(cbind("n_clust" = 1:6, "wss" = wss))
+
+ggplot(elbow_df) +
+  geom_line(aes(y = wss, x = n_clust))
+```
+
+The optimal number of categories seems to be four. Let's cluster our times series in four different groups.
+
+```{r swiss-data_cantonal_clusters}
+clusters <- kmeans(select(data_bfs_wide, -municipality), centers = 4)
+
+gg_plot <- data_bfs_wide %>% 
+  mutate(cluster = clusters$cluster) %>%
+  pivot_longer(cols = c(-municipality, -cluster), 
+               names_to = "year", 
+               values_to = "gender ratio") %>%
+  mutate(cluster = as.factor(cluster)) %>%
+  rename(canton = municipality) %>%
+  ggplot() +
+  geom_line(aes(y = `gender ratio`, x = year, 
+                group = canton, colour = cluster), 
+            show.legend = FALSE) +
+  facet_wrap(~cluster, nrow = 1) +
+  scale_color_brewer(palette = "Set2") +
+  scale_x_discrete(breaks = seq(2007, 2019, by = 3)) +
+  guides(color = FALSE) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Cantonal Gender Ratio of Cross-Bording Work in Switzerland",
+       x = "")
+
+plotly::ggplotly(gg_plot) %>%
+  hide_legend()
+```
+
+Put your mouse over the interactive plot above. You can discover the canton's name and related gender ratio for each time serie of the four clusters. Note that we have only kept data from 2007 as we had missing values for the previous years in some cantons.
+
+That's all for the exploration of the cantonal level. What about the municipal level?
+
+## Mapping time!
+
+Let's plot the gender ratio of cross-bording work by Swiss municipality for the last year available, i.e. 2019.
+
+With the great `RSwissMaps` package of David Zumbach, it is possible to create a map of Swizterland with only a few lines of code.
+
+```{r swiss-data_map}
+# the BFS id of all municipalities are inside the RSwissMaps
+# the data inside RSwissMaps is taken from year 2016
+bfs_id_mun <- RSwissMaps::mun.template(year = 2016)
+
+data_bfs_2018 <- data_bfs_ratio_annualized %>%
+  left_join(bfs_id_mun, by = c("municipality" = "name")) %>%
+  filter(year == 2019)
+
+mun.plot(data_bfs_2018$bfs_nr, 
+         data_bfs_2018$gender_per, 
+         year = 2016) +
+  scale_fill_viridis_c(labels = percent, direction = -1) +
+  theme(legend.position = "right") +
+  labs(title = "Gender Ratio of Cross-Bording Work in Switzerland",
+       subtitle = "More women in green-yellow, 2019",
+       fill = "",
+       caption = "Quarterly annualized - Data Source: BFS")
+```
+
+Data shows that central Swiss municipalites also have some cross-bording workers. If cross-bording work is mainly done by men, a few Swiss municipalities have more women working as cross-bording worker.
+
+Let me know what you think about my new `BFS` package and feel free to contribute or make a pull request [here](https://github.com/lgnbhl/BFS/issues).
