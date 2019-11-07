@@ -2,6 +2,7 @@
 
 All the data analysis of my blog (felixluginbuhl.com):
 
+- [/swiss-data](https://github.com/lgnbhl/blogposts/tree/master/swiss-data) or on [RStudio Cloud](https://rstudio.cloud/project/673254). Exploring Switzerland Official Data. Introducing my new R package {BFS} and making easily a Swiss map (https://felixluginbuhl.com/swiss-data/)
 - [/shdi](https://github.com/lgnbhl/blogposts/tree/master/shdi) or on [RStudio Cloud](https://rstudio.cloud/project/326149). The Evolution of Regional Inequalities Around the World. An interactive exploration of global human development disparities over the years (https://felixluginbuhl.com/shdi/)
 - [/pokemon](https://github.com/lgnbhl/blogposts/tree/master/pokemon) or on [RStudio Cloud](https://rstudio.cloud/project/326126). Is There Gender Equality in the Pokémon Universe? Exploring Pokémon sex ratio and building an interactive sunburst diagram. (https://felixluginbuhl.com/pokemon/)
 - [/cooking](https://github.com/lgnbhl/blogposts/tree/master/cooking) or on [RStudio Cloud](https://rstudio.cloud/project/326094). Can you Guess a Cuisine from its Ingredients? Building classification models to predict dish’s cuisines from recipe ingredients. (https://felixluginbuhl.com/cooking/)
