@@ -23,7 +23,7 @@ The [Swiss Federal Statistical Office](https://www.bfs.admin.ch/bfs/en/home.html
 
 In this article, I will show how to use my `BFS` package to easily search and download datasets from the Swiss Federal Statistical Office. We will then quickly explore a dataset and plot a map of Swiss municipalities, the lowest level of administrative division in Switzerland.
 
-As always the code is fully reproductible, so you can get if from [Github](https://github.com/lgnbhl/blogposts) and run it on you own computer or on my online [RStudio Cloud](https://rstudio.cloud/project/673254) session.
+As always the code is fully reproducible, so you can get if from my [Github](https://github.com/lgnbhl/blogposts) account and run it on you own computer or on my online [RStudio Cloud](https://rstudio.cloud/project/673254) session.
 
 ## Getting the data
 
