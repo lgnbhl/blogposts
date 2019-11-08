@@ -19,7 +19,7 @@ dir.create("inputs")
 dir.create("outputs")
 ```
 
-The [Swiss Federal Statistical Office](https://www.bfs.admin.ch/bfs/en/home.html), or BFS from "Bundesamt für Statistik" in German, provides a rich public database. As Swiss citizen and R enthousiast, I wanted to easily access its datasets directly from R. So I created the [BFS](https://felixluginbuhl.com/BFS/) package.
+The [Swiss Federal Statistical Office](https://www.bfs.admin.ch/bfs/en/home.html), or BFS from "Bundesamt für Statistik" in German, provides a rich public database. As Swiss citizen and R enthousiast, I wanted to easily access its datasets directly from R. So I created the [BFS package](https://felixluginbuhl.com/BFS/).
 
 In this article, I will show how to use my `BFS` package to easily search and download datasets from the Swiss Federal Statistical Office. We will then quickly explore a dataset and plot a map of Swiss municipalities, the lowest level of administrative division in Switzerland.
 
@@ -73,15 +73,15 @@ That's all for my new `BFS` package.
 
 Using the [Tidyverse](https://www.tidyverse.org/) workflow, we can now performe a quick exploratory data analysis.
 
-Let's begin with a glimpse of the data.
+Let's begin with a glimpse at the data.
 
 ```{r}
 glimpse(data_bfs)
 ```
 
-The dataset contains information about the number of cross-border worker by quarter (`quartal`), Swiss municipality (`arbeitsgemeinde`) and gender (`geschlecht`).
+The dataset contains information about the number of cross-border workers by quarter (`quartal`), Swiss municipality (`arbeitsgemeinde`) and gender (`geschlecht`).
 
-Notice that `value` is a pondered value: each worker get a weighted point between 0-1 according to the number of our of works he/she is doing (see more [here](https://www.bfs.admin.ch/bfs/de/home/statistiken/arbeit-erwerb/erhebungen/ggs.html)). It is therefore more appropriate to speak about "cross-bording work" as the value of two men working half time in a Swiss municipality is equal to a full time cross-border working woman.
+Notice that `value` is a pondered value: each worker get a weighted point between 0-1 according to the number of hours of works he/she is doing (see more [here](https://www.bfs.admin.ch/bfs/de/home/statistiken/arbeit-erwerb/erhebungen/ggs.html)). It is therefore more appropriate to speak about "cross-border work" as the value of two men working half time in a Swiss municipality is equal to a full time cross-border working woman.
 
 I am curious to learn more about the gender ratio of cross-border work by municipality and its evolution over the years. Let's build a new `gender_ratio` variable.
 
@@ -155,7 +155,7 @@ data_bfs_ratio_annualized %>%
   geom_segment(aes(x = 2016, y = 0.551, xend = 2016, yend = 0.635), 
                color = "black", size = 0.2, 
                arrow = arrow(length = unit(0.2, "cm"))) +
-  labs(title = "Gender Ratio of Cross-Bording Work",
+  labs(title = "Proportion of Men in Cross-Border Workforce",
        subtitle = "Switzerland, 1995-2019",
        color = "Canton",
        x = "", y = "",
@@ -205,7 +205,7 @@ gg_plot <- data_bfs_wide %>%
   scale_x_discrete(breaks = seq(2007, 2019, by = 3)) +
   guides(color = FALSE) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(title = "Cantonal Gender Ratio of Cross-Bording Work in Switzerland",
+  labs(title = "Proportion of Men in Cross-Border Workforce in Swiss Cantons",
        x = "")
 
 plotly::ggplotly(gg_plot) %>%
@@ -236,7 +236,7 @@ mun.plot(data_bfs_2018$bfs_nr,
          year = 2016) +
   scale_fill_viridis_c(labels = percent, direction = -1) +
   theme(legend.position = "right") +
-  labs(title = "Gender Ratio of Cross-Bording Work in Switzerland",
+  labs(title = "Proportion of Men in Cross-Border Workforce in Switzerland",
        subtitle = "More women in green-yellow, 2019",
        fill = "",
        caption = "Quarterly annualized - Data Source: BFS")
