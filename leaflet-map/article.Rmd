@@ -21,7 +21,13 @@ A friend recently offered me a fun book: *Brilliant maps. An atlas for curious m
 
 The authors specify in a footnote that they excluded "country", linking words, demonyms and "government". Surprisingly the most recurring word of the English Wikipedia page are often either revealing or funny. For example, the most recurring word of the English Wikipedia page of the USA is, according to the infographic, "war". For China, it would be "dynasty", Australia "new" and Russia "soviet". 
 
-These results can quite easily be checked using R programming. Let's do this!
+In this article, we will:
+
+- scrape 193 Country Wikipedia articles and clean the data in a tidy way;
+- explore top recurrings words and make new methodological choices;
+- recreate the infographic as an interactive world map using Leaflet.
+
+As always the R code is fully reproducible, so you can get it from my [Github repository](https://github.com/lgnbhl/blogposts/tree/master/leaflet-map) or on my online [RStudio Cloud](https://rstudio.cloud/project/800344) session.
 
 ## Scraping 193 Wikipedia pages
 
