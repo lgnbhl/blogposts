@@ -27,7 +27,7 @@ In this article, we will:
 - explore the top recurrings words and make new methodological choices;
 - recreate the infographic as an interactive world map using Leaflet.
 
-As always my analysis is fully reproducible, so you can get my R code from my [Github repository](https://github.com/lgnbhl/blogposts/tree/master/leaflet-map) or on my online RStudio Cloud session.
+As always my analysis is fully reproducible, so you can get my R code from my [Github repository](https://github.com/lgnbhl/blogposts/tree/master/leaflet-map) or my online [RStudio Cloud](https://rstudio.cloud/project/800344) session.
 
 ## Scraping 193 Wikipedia pages
 
