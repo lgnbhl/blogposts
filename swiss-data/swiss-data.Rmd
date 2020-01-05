@@ -57,10 +57,9 @@ We got 34 different datasets related to Swiss municipalities. I am interested by
 
 ```{r}
 # browseURL(meta_de_gemeinde$url[1]) # open related webpage
-meta_de_gemeinde$title[1] # print title
-meta_de_gemeinde1 <- bfs_search("Ausländische Grenzgänger/innen nach Geschlecht und Arbeitsgemeinde", 
-                                meta_de_gemeinde)
-
+# meta_de_gemeinde$title[1] # print title
+df_title <- "Ausländische Grenzgänger/innen nach Geschlecht und Arbeitsgemeinde"
+meta_de_gemeinde1 <- bfs_search(df_title, meta_de_gemeinde)
 data_bfs <- bfs_get_dataset(meta_de_gemeinde1$url_px[1])
 data_bfs
 ```
