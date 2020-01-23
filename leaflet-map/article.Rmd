@@ -14,7 +14,7 @@ knitr::opts_chunk$set(
 
 # install/load needed R packages
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, rvest, janitor, WikipediR, purrr, tidyr, tidytext, countrycode, leaflet, rnaturalearth, rnaturalearthdata, htmltools)
+pacman::p_load(tidyverse, rvest, janitor, WikipediR, tidytext, countrycode, leaflet, rnaturalearth, rnaturalearthdata, htmltools)
 
 ```
 
@@ -87,8 +87,6 @@ Now let's use the official Wikipedia API available through the {WikipediR} R pac
 
 ```{r}
 library(WikipediR)
-library(purrr)
-library(tidyr)
 
 table_txt <- table %>%
   mutate(txt = map(page_name, ~ WikipediR::page_content("en", "wikipedia",

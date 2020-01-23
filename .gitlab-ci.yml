@@ -16,7 +16,7 @@ check:
   script:
     - R -e 'rmarkdown::render("leaflet-map/article.Rmd")'
 
-#check:
-  #stage: check_shdi
-  #script:
-    #- R -e 'rmarkdown::render("shdi/shdi.Rmd")'
+check:
+  stage: check_shdi
+  script:
+    - R -e 'rmarkdown::render("shdi/shdi.Rmd")'
