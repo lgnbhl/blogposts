@@ -2,8 +2,14 @@ image: rocker/verse
 
 stages:
   - check_swissdata
+  - check_leafletmap
 
 check:
   stage: check_swissdata
   script:
     - R -e 'rmarkdown::render("swiss-data/swiss-data.Rmd")'
+
+check:
+  stage: check_leafletmap
+  script:
+    - R -e 'rmarkdown::render("leaflet-map/article.Rmd")'
