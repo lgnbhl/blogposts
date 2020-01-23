@@ -19,6 +19,7 @@ article_leafletmap:
     when: always
 
 article_shdi:
+  image: rocker/geospatial
   script:
     - R -e 'rmarkdown::render("shdi/shdi.Rmd")'
   artifacts:
