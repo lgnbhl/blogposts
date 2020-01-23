@@ -12,7 +12,10 @@ knitr::opts_chunk$set(
 	message = FALSE,
 	warning = FALSE
 )
-# install.packages(c("Amelia", "caret", "e1071", "hrbrthemes", "rvest", "tidytext", "tidyverse", "tm", "xgboost"))
+
+# install/load needed R packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(Amelia, caret, e1071, hrbrthemes, rvest, tidytext, tidyverse, tm, xgboost)
 ```
 
 ![](https://raw.githubusercontent.com/lgnbhl/lgnbhl.github.io/master/images/image_WizardOfOz.jpg)

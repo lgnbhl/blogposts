@@ -12,7 +12,10 @@ knitr::opts_chunk$set(
 	message = FALSE,
 	warning = FALSE
 )
-# install.packages(c("tidyverse", "rvest", "tidygraph", "ggraph", "ggforce", "visNetwork"))
+
+# install/load needed R packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, rvest, tidygraph, ggraph, ggforce, visNetwork)
 ```
 
 To begin this year, I was looking for a quick project related to social network visualization. As R analyses on [Game of Thrones](https://shiring.github.io/networks/2017/05/15/got_final), [Star Wars](https://rpubs.com/ogimenez/200849) or [The Lord of The Rings](http://mildlyscientific.schochastics.net/2016/08/10/the-lord-of-the-rings-the-three-networks/) have already been done, I decided to visualize the superhero network of the nowadays very popular Marvel movies saga. In this blog post, we will find out which characters and movies are the most central in the Marvel cinematic universe[^1].

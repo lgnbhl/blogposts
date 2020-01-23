@@ -47,3 +47,27 @@ article_forecasting:
     paths:
       - forecasting
     when: always
+
+article_olympics:
+  script:
+    - R -e 'rmarkdown::render("olympics/olympics.Rmd")'
+  artifacts:
+    paths:
+      - olympics
+    when: always
+
+article_network:
+  script:
+    - R -e 'rmarkdown::render("network/network.Rmd")'
+  artifacts:
+    paths:
+      - network
+    when: always
+
+article_movies:
+  script:
+    - R -e 'rmarkdown::render("movies/movies.Rmd")'
+  artifacts:
+    paths:
+      - movies
+    when: always

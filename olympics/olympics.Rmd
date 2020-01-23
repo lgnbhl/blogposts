@@ -3,7 +3,9 @@ title: "Do the Rich Countries Always Win?"
 subtitle: "Making regression models to explore the relationship between the HDI and the medals won during the Winter Olympics Games."
 date: "13/03/2018"  
 author: "Felix Luginbuhl"
-output: html_document
+output: 
+  html_document:
+    code_folding: "show"
 ---
 
 ```{r setup, include=FALSE}
@@ -12,7 +14,11 @@ knitr::opts_chunk$set(
 	message = FALSE,
 	warning = FALSE
 )
-# install.packages(c("broom", "gvlma", "countrycode", "ggimage", "ggthemes", "plotly", "pscl", "readxl", "reshape2", "rvest", "tidyverse"))
+
+# install/load needed R packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(broom, gvlma, countrycode, ggimage, ggthemes, plotly, pscl, readxl, reshape2, rvest, tidyverse)
+
 ```
 
 ![](input/image_wo_medals.png)
