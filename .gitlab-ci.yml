@@ -32,6 +32,14 @@ article_pokemon:
       - pokemon
     when: always
 
+#article_cooking:
+  #script:
+    #- R -e 'rmarkdown::render("cooking/cooking.Rmd")'
+  #artifacts:
+    #paths:
+      #- cooking
+    #when: always
+
 article_mapping:
   script:
     - R -e 'rmarkdown::render("mapping/mapping.Rmd")'
@@ -70,4 +78,36 @@ article_movies:
   artifacts:
     paths:
       - movies
+    when: always
+
+#article_tennis:
+  #script:
+    #- R -e 'rmarkdown::render("tennis/tennis.Rmd")'
+  #artifacts:
+    #paths:
+      #- tennis
+    #when: always
+
+#article_bond:
+  #script:
+    #- R -e 'rmarkdown::render("bond/bond.Rmd")'
+  #artifacts:
+    #paths:
+      #- bond
+    #when: always
+
+article_orwell:
+  script:
+    - R -e 'rmarkdown::render("orwell/orwell.Rmd")'
+  artifacts:
+    paths:
+      - orwell
+    when: always
+
+article_marvel:
+  script:
+    - R -e 'rmarkdown::render("marvel/marvel.Rmd")'
+  artifacts:
+    paths:
+      - marvel
     when: always
