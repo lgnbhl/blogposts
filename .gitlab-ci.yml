@@ -1,10 +1,7 @@
 image: rocker/geospatial # rocker/verse within
 
 stages:
-  - swissdata
-  - leafletmap
-  - shdi
-  - pokemon
+  - test
 
 test:
   stage: swissdata
