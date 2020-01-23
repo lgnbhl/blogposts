@@ -1,27 +1,43 @@
 image: rocker/geospatial # rocker/verse within
 
 stages:
-  - check
+  - check_swissdata
+  - check_leafletmap
+  - check_shdi
+  - check_pokemon
 
-check:
-  stage: check
+test:
+  stage: check_swissdata
   script:
-    - R -e 'rmarkdown::render("swiss-data/swiss-data.Rmd")' > swiss-data.html
+    - R -e 'rmarkdown::render("swiss-data/swiss-data.Rmd")'
   artifacts:
     paths:
-    - swiss-data.html
+      - swiss-data
+    when: always
 
-#check:
-  #stage: check
-  #script:
-    #- R -e 'rmarkdown::render("leaflet-map/article.Rmd")'
+test:
+  stage: check_leafletmap
+  script:
+    - R -e 'rmarkdown::render("leaflet-map/leaflet-map.Rmd")'
+  artifacts:
+    paths:
+      - leaflet-map
+    when: always
 
-#check:
-  #stage: check
-  #script:
-    #- R -e 'rmarkdown::render("shdi/shdi.Rmd")'
+test:
+  stage: check_shdi
+  script:
+    - R -e 'rmarkdown::render("shdi/shdi.Rmd")'
+  artifacts:
+    paths:
+      - shdi
+    when: always
 
-#check:
-  #stage: check
-  #script:
-    #- R -e 'rmarkdown::render("pokemon/pokemon.Rmd")'
+test:
+  stage: check_pokemon
+  script:
+    - R -e 'rmarkdown::render("pokemon/pokemon.Rmd")'
+  artifacts:
+    paths:
+      - pokemon
+    when: always
