@@ -20,7 +20,7 @@ if (!require("pacman")) install.packages("pacman")
 pacman::p_load(tidyverse, DT, treemap, sunburstR, d3r, htmlwidgets)
 ```
 
-[![](/images/screenshot_worldmap_leaflet.png)](/images/worldmap_leaflet.html)
+[![](https://felixluginbuhl.com/dataisbeautiful/pokemon_genders.png)](https://felixluginbuhl.com/dataisbeautiful/pokemon_genders.html)
 
 With more than 13 millions of subscribers, Reddit's *[Data Is
 Beautiful](https://www.reddit.com/r/dataisbeautiful/comments/9cuzs3/battle_dataviz_battle_for_the_month_of_september/)* is one of the main online forum on data visualization. Last week I came accross the funny dataset of the current DataViz
@@ -157,6 +157,6 @@ sb <- htmlwidgets::onRender(sb,
     }
 ```
 
-[![](output/pokemon_genders.png)](https://lgnbhl.github.io/dataisbeautiful/pokemon_genders.html)
+[![](https://felixluginbuhl.com/dataisbeautiful/pokemon_genders.png)](https://felixluginbuhl.com/dataisbeautiful/pokemon_genders.html)
 
 Thanks for reading. For updates of recent blog posts, follow me on [Twitter](https://twitter.com/lgnbhl).
