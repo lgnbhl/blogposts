@@ -1,11 +1,5 @@
 image: rocker/geospatial # rocker/verse within
 
-stages:
-  - check_swissdata
-  - check_leafletmap
-  - check_shdi
-  - check_pokemon
-
 check:
   stage: check_swissdata
   script:
