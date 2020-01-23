@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 
 # install/load needed R packages
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, lubridate, dygraphs, forecast, scales, sweep, timetk)
+pacman::p_load(tidyverse, lubridate, dygraphs, hrbrthemes, forecast, scales, sweep, timetk)
 ```
 
 ![](https://opendata.swisscom.com/assets/theme_image/Swisscom%20Open%20Data.jpg)
@@ -313,7 +313,7 @@ swissData_call_nested %>%
 ```
 
 Our forecasting models did quite a good job. They got correctly the two
-seasonalities, i.e. per day and per week. However, they seem to
+seasonalities, i.e. per day and per week. However, they seem to
 overestimate the number of phone calls in August. It is not a surprise
 that our forecasting models are approximate. As Niel Bohr once famously
 said:
