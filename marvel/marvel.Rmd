@@ -3,10 +3,9 @@ title: "Marvel vs DC Comics"
 subtitle: "Une comparaison des résultats au Box Office avec {ggplot2} et Tableau Public."
 author: "Felix Luginbuhl"
 date: "19/06/2017"
-output:
+output: 
   html_document:
-    keep_md: yes
-  github_document: default
+    code_folding: "show"
 ---
 
 ```{r setup, include=FALSE}
@@ -15,7 +14,10 @@ knitr::opts_chunk$set(
 	message = FALSE,
 	warning = FALSE
 )
-# install.packages(c("lubridate", "scales", "tidyverse", "waffle"))
+
+# install/load needed R packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, lubridate, scales, waffle)
 ```
 
 Les adaptations de superhéros brillent aux Box Office. Les films *Marvel's The Avengers* et *Avengers: Age of Ultron* sont ainsi les 5ème et 7ème plus gros succès au Box Office international. L'envie m'a prise de comparer les succès commerciaux des deux sociétés qui se partagent un quasi monopole des superhéros: Marvel Studios et DC Entertainment.

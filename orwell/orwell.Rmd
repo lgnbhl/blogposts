@@ -3,10 +3,9 @@ title: "Orwell’s 1984, An (Un)Sentimental Analysis"
 subtitle: "A text and sentiment analysis of George Orwell's 1984 book."
 author: "Felix Luginbuhl"
 date: "10/07/2017"
-output:
+output: 
   html_document:
-    keep_md: yes
-  github_document: default
+    code_folding: "show"
 ---
 
 ```{r setup, include=FALSE}
@@ -15,7 +14,10 @@ knitr::opts_chunk$set(
 	message = FALSE,
 	warning = FALSE
 )
-# install.packages(c("ggthemes", "scales", "tidyr", "tidytext", "tidyverse", "wordcloud"))
+
+# install/load needed R packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, ggthemes, scales, tidyr, tidytext, wordcloud)
 ```
 
 ![](https://raw.githubusercontent.com/lgnbhl/lgnbhl.github.io/master/images/image_BigBrother.jpg)
