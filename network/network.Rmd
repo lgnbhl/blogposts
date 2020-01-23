@@ -3,7 +3,9 @@ title: "Which Marvel Characters and Movies are the Most Central?"
 subtitle: "Building an interactive social network visualization of the Marvel cinematic universe."
 date: "26/01/2018"
 author: "Felix Luginbuhl"
-output: html_document
+output: 
+  html_document:
+    code_folding: "show"
 ---
 
 ```{r setup, include=FALSE}

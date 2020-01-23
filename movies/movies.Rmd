@@ -3,7 +3,9 @@ title: "The Lack of Female Protagonists in Children’s Movies"
 subtitle: "Scraping Wikipedia and using machine learning to estimate the gender of central characters in 100 years of childrens' movies."
 date: "11/12/2017"
 author: "Felix Luginbuhl"
-output: html_document
+output: 
+  html_document:
+    code_folding: "show"
 ---
 
 ```{r setup, include=FALSE}
