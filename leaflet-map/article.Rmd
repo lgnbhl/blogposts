@@ -14,7 +14,7 @@ knitr::opts_chunk$set(
 
 # install/load needed R packages
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, rvest, WikipediR, purrr, tidyr, tidytext, countrycode, leaflet, rnaturalearth, rnaturalearthdata, htmltools)
+pacman::p_load(tidyverse, rvest, janitor, WikipediR, purrr, tidyr, tidytext, countrycode, leaflet, rnaturalearth, rnaturalearthdata, htmltools)
 
 ```
 
@@ -41,6 +41,7 @@ Firstly, we need a list of all Wikipedia pages we want to scrap. The [Wikipedia 
 ```{r}
 library(tidyverse)
 library(rvest)
+library(janitor)
 
 wikilink_permalink <- "https://en.wikipedia.org/w/index.php?title=Member_states_of_the_United_Nations&oldid=926737595"
 

@@ -3,6 +3,7 @@ image: rocker/verse
 stages:
   - check_swissdata
   - check_leafletmap
+  - check_shdi
 
 check:
   stage: check_swissdata
@@ -13,3 +14,8 @@ check:
   stage: check_leafletmap
   script:
     - R -e 'rmarkdown::render("leaflet-map/article.Rmd")'
+
+check:
+  stage: check_shdi
+  script:
+    - R -e 'rmarkdown::render("shdi/shdi.Rmd")'
