@@ -1,0 +1,8 @@
+stages:
+  - check
+
+check:
+  stage: check
+  image: rocker/verse
+  script:
+    - R -e 'rmarkdown::render("swiss-data/swiss-data.Rmd")'
