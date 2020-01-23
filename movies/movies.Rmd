@@ -253,7 +253,7 @@ Note that the function takes only the first paragraph of the article plot sectio
 Okay, let's try our function on the first link.
 
 ```{r}
-str(moviesData(urls[1]))
+# str(moviesData(urls[1]))
 ```
 
 In order to scrape the 1700 wikilinks and build a single dataset of 7 variables, we will use an elegant code written by Giora in [another post](http://giorasimchoni.com/2017/10/08/2017-10-08-sign-of-the-times/) of his blog.
@@ -588,13 +588,13 @@ Another explanation could be that when a man and a woman are both the main chara
 We learned from the confusion matrix that most of the "Other" tend to be "Male". A quick look at the description of the movies tagged as "Other" confirms that men are more present in the text. So let's simply recode all the `2` as `1` and rerun all the script that led us to this stage of the analysis in order to try a binary logistic classification.
 
 ```{r}
-movies_2 <- read_csv("output/movies_mod.csv")
+movies_2 <- movies
 
 # Recoding all 2 to 1
-movies_2$class[movies_2$class == 2] <- 1
+movies_2$class[movies$class == 2] <- 1
 # then running the exact same code with the new "movies_2" dataset
 set.seed(22) # changing random sample (previously set.seed(2))
-# ...
+
 movies_2$actorFirstName <- movies_2$actors %>%
   sub(" .*", "",.)
 
@@ -640,13 +640,12 @@ dataForModeling_2 <- movies_2 %>%
   inner_join(movies_2 %>%
                select(id, starts_with("i_"), class, type), "id")
 
-nonWordColIdx <- c(1, which(str_detect(colnames(dataForModeling_2), "i_")),
+nonWordColIdx_2 <- c(1, which(str_detect(colnames(dataForModeling_2), "i_")),
                    ncol(dataForModeling_2) - 1,
                    ncol(dataForModeling_2))
-bkDescWords <- colnames(dataForModeling_2)[-nonWordColIdx]
-colnames(dataForModeling_2)[-nonWordColIdx] <- str_c("word", 1:length(bkDescWords))
+bkDescWords <- colnames(dataForModeling_2)[-nonWordColIdx_2]
+colnames(dataForModeling_2)[-nonWordColIdx_2] <- str_c("word", 1:length(bkDescWords))
 
-# write_csv(dataForModeling_2, "output/dataForModeling_2.csv")
 dim(dataForModeling_2)
 
 train_2 <- dataForModeling_2 %>%
@@ -667,8 +666,6 @@ xgb_params_2 <- list("objective" = "binary:logistic") # binary classification
 nround <- 50
 
 xgboostModel_2 <- xgb.train(params = xgb_params_2, data = train_matrix_2, nrounds = nround)
-
-# xgb.save(xgboostModel_2, "output/xgboostModel_2")
 
 test_pred_2 <- predict(xgboostModel_2, newdata = test_matrix_2)
 
