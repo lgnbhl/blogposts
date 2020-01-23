@@ -14,8 +14,10 @@ knitr::opts_chunk$set(
 	message = FALSE,
 	warning = FALSE
 )
-# install.packages(c("DT", "tidyverse", "treemap", "sunburstR"))
-# dir.create("input") # dir.create("input")
+
+# install/load needed R packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, DT, treemap, sunburstR, d3r, htmlwidgets)
 ```
 
 [![](/images/screenshot_worldmap_leaflet.png)](/images/worldmap_leaflet.html)
