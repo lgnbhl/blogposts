@@ -11,6 +11,11 @@ knitr::opts_chunk$set(
   message = FALSE,
   warning = FALSE
 )
+
+# install/load needed R packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, rvest, WikipediR, purrr, tidyr, tidytext, countrycode, leaflet, rnaturalearth, rnaturalearthdata, htmltools)
+
 ```
 
 ![](screenshot_worldmap_leaflet.png)
