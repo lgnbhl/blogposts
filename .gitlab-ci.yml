@@ -1,6 +1,7 @@
-image: rocker/geospatial # rocker/verse within
+# CI for selected articles
 
 article_swissdata:
+  image: rocker/geospatial # rocker/verse within
   script:
     - R -e 'rmarkdown::render("swiss-data/swiss-data.Rmd")'
   artifacts:
@@ -9,6 +10,7 @@ article_swissdata:
     when: always
 
 article_leafletmap:
+  image: rocker/geospatial
   script:
     - R -e 'rmarkdown::render("leaflet-map/leaflet-map.Rmd")'
   artifacts:
@@ -25,6 +27,7 @@ article_shdi:
     when: always
 
 article_pokemon:
+  image: rocker/verse
   script:
     - R -e 'rmarkdown::render("pokemon/pokemon.Rmd")'
   artifacts:
@@ -41,6 +44,7 @@ article_pokemon:
     #when: always
 
 article_mapping:
+  image: rocker/geospatial
   script:
     - R -e 'rmarkdown::render("mapping/mapping.Rmd")'
   artifacts:
@@ -49,6 +53,7 @@ article_mapping:
     when: always
 
 article_forecasting:
+  image: rocker/verse
   script:
     - R -e 'rmarkdown::render("forecasting/forecasting.Rmd")'
   artifacts:
@@ -57,6 +62,7 @@ article_forecasting:
     when: always
 
 article_olympics:
+  image: rocker/verse
   script:
     - R -e 'rmarkdown::render("olympics/olympics.Rmd")'
   artifacts:
@@ -65,6 +71,7 @@ article_olympics:
     when: always
 
 article_network:
+  image: rocker/verse
   script:
     - R -e 'rmarkdown::render("network/network.Rmd")'
   artifacts:
@@ -73,6 +80,7 @@ article_network:
     when: always
 
 article_movies:
+  image: rocker/verse
   script:
     - R -e 'rmarkdown::render("movies/movies.Rmd")'
   artifacts:
@@ -97,6 +105,7 @@ article_movies:
     #when: always
 
 article_orwell:
+  image: rocker/verse
   script:
     - R -e 'rmarkdown::render("orwell/orwell.Rmd")'
   artifacts:
@@ -105,6 +114,7 @@ article_orwell:
     when: always
 
 article_marvel:
+  image: rocker/verse
   script:
     - R -e 'rmarkdown::render("marvel/marvel.Rmd")'
   artifacts:
