@@ -1,7 +1,8 @@
 image: rocker/geospatial # rocker/verse within
 
 stages:
-  - test
+  - leafletmap
+  - swissdata
 
 test:
   stage: swissdata
