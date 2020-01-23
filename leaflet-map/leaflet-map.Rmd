@@ -2,7 +2,9 @@
 title: "Most Recurring Word on each Country's Wikipedia Page"
 author: "Felix Luginbuhl"
 date: "16th December, 2019"
-output: html_document
+output: 
+  html_document:
+    code_folding: "show"
 ---
 
 ```{r setup, include=FALSE}

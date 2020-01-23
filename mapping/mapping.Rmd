@@ -5,7 +5,7 @@ date: "05/06/2018"
 author: "Felix Luginbuhl"
 output: 
   html_document:
-    code_folding: "hide"
+    code_folding: "show"
 ---
 
 ```{r setup, include=FALSE}
@@ -14,7 +14,10 @@ knitr::opts_chunk$set(
 	message = FALSE,
 	warning = FALSE
 )
-# install.packages(c("countrycode", "dplyr", "ggalt", "ggplot2", "ggthemes", "hrbrthemes", "leaflet", "RColorBrewer", "readxl", "rnaturalearth", "rnaturalearthdata", "rgeos", "rvest", "sf", "tidyverse"))
+
+# install/load needed R packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, rvest, sf, countrycode, ggalt, ggthemes, hrbrthemes, leaflet, RColorBrewer, readxl, rnaturalearth, rnaturalearthdata, rgeos)
 ```
 
 I am a big fan of The Economist charts, in particular the ones published

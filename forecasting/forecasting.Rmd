@@ -3,12 +3,21 @@ title: "Predicting the Number of Swiss Phone Calls per Hour"
 subtitle: "Tidy time series analysis and forecasting models with Swisscom Open Data."
 date: "09/05/2018"
 author: "Felix Luginbuhl"
-output: github_document
+output: 
+  html_document:
+    code_folding: "show"
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-# install.packages(c("dygraphs", "forecast", "lubridate", "scales", "sweep", "tidyverse", "timetk"))
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+
+# install/load needed R packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, lubridate, dygraphs, forecast, scales, sweep, timetk)
 ```
 
 ![](https://opendata.swisscom.com/assets/theme_image/Swisscom%20Open%20Data.jpg)

@@ -1,6 +1,6 @@
 image: rocker/geospatial # rocker/verse within
 
-swissdata:
+article_swissdata:
   script:
     - R -e 'rmarkdown::render("swiss-data/swiss-data.Rmd")'
   artifacts:
@@ -8,7 +8,7 @@ swissdata:
       - swiss-data
     when: always
 
-leafletmap:
+article_leafletmap:
   script:
     - R -e 'rmarkdown::render("leaflet-map/leaflet-map.Rmd")'
   artifacts:
@@ -16,7 +16,7 @@ leafletmap:
       - leaflet-map
     when: always
 
-shdi:
+article_shdi:
   script:
     - R -e 'rmarkdown::render("shdi/shdi.Rmd")'
   artifacts:
@@ -24,10 +24,26 @@ shdi:
       - shdi
     when: always
 
-pokemon:
+article_pokemon:
   script:
     - R -e 'rmarkdown::render("pokemon/pokemon.Rmd")'
   artifacts:
     paths:
       - pokemon
+    when: always
+
+article_mapping:
+  script:
+    - R -e 'rmarkdown::render("mapping/mapping.Rmd")'
+  artifacts:
+    paths:
+      - mapping
+    when: always
+
+article_forecasting:
+  script:
+    - R -e 'rmarkdown::render("forecasting/forecasting.Rmd")'
+  artifacts:
+    paths:
+      - forecasting
     when: always

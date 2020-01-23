@@ -3,7 +3,9 @@ title: "Exploring Switzerland Official Datasets"
 subtitle: "Introducing my new R package {BFS}"
 author: "Felix Luginbuhl"
 date: "2019-11-07"
-output: html_document
+output: 
+  html_document:
+    code_folding: "show"
 ---
 
 ```{r setup, include=FALSE}
