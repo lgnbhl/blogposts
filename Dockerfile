@@ -1,5 +1,5 @@
 ## Use a tag instead of "latest" for reproducibility
-FROM rocker/binder:latest
+FROM "registry.gitlab.com/lgnbhl/blogposts/install:latest"
 
 ## Declares build arguments
 ARG NB_USER
@@ -19,4 +19,4 @@ RUN chown -R ${NB_USER} ${HOME}
 USER ${NB_USER}
 
 ## Run an install.R script, if it exists.
-RUN if [ -f install/install.R ]; then R --quiet -f install/install.R; fi
+# RUN if [ -f install/install.R ]; then R --quiet -f install/install.R; fi

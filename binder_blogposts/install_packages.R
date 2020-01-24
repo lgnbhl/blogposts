@@ -1,11 +1,5 @@
 # Install all packages used in each of my blog posts
 
-# TO RUN:
-# docker login registry.gitlab.com
-# docker build -t registry.gitlab.com/lgnbhl/blogposts/install .
-# docker push registry.gitlab.com/lgnbhl/blogposts
-
-
 # install/load needed R packages
 if (!require("pacman")) install.packages("pacman")
 
