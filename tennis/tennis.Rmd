@@ -3,12 +3,21 @@ title: "Who's The Most Popular Tennis Player on Twitter?"
 subtitle: "Analyzing the Tweets of Roger Federer, Rafael Nadal, Novak Djokovic and Andy Murray."
 date: "22/09/2017"
 author: "Felix Luginbuhl"
-output: html_document
+output: 
+  html_document:
+    code_folding: "show"
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-# install.packages(c("dygraphs", "ggthemes", "lubridate", "magick", "RColorBrewer", "rtweet", "httpuv", "scales", "tidyr", "tidytext", "tidyverse", "xts"))
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+
+# install/load needed R packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, dygraphs, ggthemes, lubridate, magick, RColorBrewer, rtweet, httpuv, scales, tidytext, xts)
 ```
 
 ![](https://raw.githubusercontent.com/lgnbhl/lgnbhl.github.io/master/images/image_tennis.jpg)

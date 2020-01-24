@@ -3,7 +3,9 @@ title: "James Bond Tourism"
 subtitle: "Mapping and comparing 007 travel locations of the movie franchise."
 author: "Felix Luginbuhl"
 date: "24/08/2017"
-output: html_document
+output: 
+  html_document:
+    code_folding: "show"
 ---
 
 ```{r setup, include=FALSE}
@@ -12,7 +14,10 @@ knitr::opts_chunk$set(
 	message = FALSE,
 	warning = FALSE
 )
-# install.packages(c("ggalt", "ggiraph", "ggmap", "ggthemes", "maps", "tidyr", "tidyverse"))
+
+# install/load needed R packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, ggalt, ggiraph, ggmap, ggthemes, maps)
 ```
 
 ![](https://raw.githubusercontent.com/lgnbhl/lgnbhl.github.io/master/images/image_Skyfall.jpg)
