@@ -1,17 +1,16 @@
 # CI for selected articles
 # the articles /bond, /tennis and /cooking are not fully reproducibles
 
-build_image:
-  image: docker:git
-  services:
-  - docker:dind
-  script:
-    #- docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.example.com
-    - docker build -t registry.gitlab.com/lgnbhl/blogposts/binder_blogposts .
-    - docker push registry.gitlab.com/lgnbhl/blogposts/binder_blogposts
-  only:
-    - master
-
+#build_image:
+  #image: docker:git
+  #services:
+  #- docker:dind
+  #script:
+    #- docker login -u lgnbhl -p $CI_BUILD_TOKEN registry.gitlab.com
+    #- docker build -t registry.gitlab.com/lgnbhl/blogposts/binder_blogposts .
+    #- docker push registry.gitlab.com/lgnbhl/blogposts/binder_blogposts
+  #only:
+    #- master
 
 article_swissdata:
   image: rocker/geospatial # rocker/verse within
