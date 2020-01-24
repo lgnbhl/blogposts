@@ -4,7 +4,7 @@
 
 # blogposts
 
-All the data analysis of my blog (felixluginbuhl.com):
+All the data analysis of my blog (https://felixluginbuhl.com/blog/).
 
 - [/swiss-data](https://github.com/lgnbhl/blogposts/tree/master/swiss-data) or on [RStudio Cloud](https://rstudio.cloud/project/673254). Exploring Switzerland Official Data. Introducing my new R package {BFS} and making easily a Swiss map (https://felixluginbuhl.com/swiss-data/)
 - [/shdi](https://github.com/lgnbhl/blogposts/tree/master/shdi) or on [RStudio Cloud](https://rstudio.cloud/project/326149). The Evolution of Regional Inequalities Around the World. An interactive exploration of global human development disparities over the years (https://felixluginbuhl.com/shdi/)
