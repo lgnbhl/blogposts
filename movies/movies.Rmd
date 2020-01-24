@@ -591,7 +591,7 @@ We learned from the confusion matrix that most of the "Other" tend to be "Male".
 movies_2 <- movies
 
 # Recoding all 2 to 1
-movies_2$class[movies$class == 2] <- 1
+movies_2$class[movies_2$class == 2] <- 1
 # then running the exact same code with the new "movies_2" dataset
 set.seed(22) # changing random sample (previously set.seed(2))
 
@@ -674,9 +674,7 @@ importance_matrix_2 <- xgb.importance(feature_names = names_2, model = xgboostMo
 head(importance_matrix_2, 10) %>%
   left_join(tibble(Feature = colnames(dataForModeling_2)[-nonWordColIdx], word = bkDescWords), "Feature") %>%
   select(word, Feature, Gain)
-```
 
-```{r}
 # Making a confusion matrix is much easier with a binary classification
 pred_class_2 <- ifelse(test_pred_2 > 0.75, 1, 0) # 0.75 as compensation of "Male" overrating
 

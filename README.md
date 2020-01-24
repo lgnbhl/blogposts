@@ -1,3 +1,7 @@
+<!-- badges: start -->
+[![pipeline status](https://gitlab.com/lgnbhl/blogposts/badges/master/pipeline.svg)](https://gitlab.com/lgnbhl/blogposts/pipelines)
+<!-- badges: end -->
+
 # blogposts
 
 All the data analysis of my blog (felixluginbuhl.com):

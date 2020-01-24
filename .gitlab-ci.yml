@@ -1,4 +1,5 @@
 # CI for selected articles
+# the articles /bond, /tennis and /cooking are not fully reproducibles
 
 article_swissdata:
   image: rocker/geospatial # rocker/verse within
