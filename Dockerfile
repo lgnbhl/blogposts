@@ -1,5 +1,5 @@
 ## Use a tag instead of "latest" for reproducibility
-FROM "registry.gitlab.com/lgnbhl/blogposts/install:latest"
+FROM "registry.gitlab.com/lgnbhl/blogposts/binder_blogposts:latest"
 
 ## Declares build arguments
 ARG NB_USER
