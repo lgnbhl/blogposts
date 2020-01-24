@@ -1,6 +1,6 @@
 <!-- badges: start -->
 [![pipeline status](https://gitlab.com/lgnbhl/blogposts/badges/master/pipeline.svg)](https://gitlab.com/lgnbhl/blogposts/pipelines)
-[![Binder](http://mybinder.org/badge.svg)](http://beta.mybinder.org/v2/gh/lgnbhl/blogposts/master?urlpath=rstudio)
+[![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/lgnbhl/blogposts/master?urlpath=rstudio)
 <!-- badges: end -->
 
 # blogposts
