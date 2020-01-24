@@ -17,3 +17,4 @@ pacman::p_load(tidyverse, DT, treemap, sunburstR, d3r, htmlwidgets) # pokemon
 pacman::p_load(tidyverse, sf, tmap, srvyr, plotly, gganimate, quantreg, countrycode, hrbrthemes, knitr) # shdi
 pacman::p_load(tidyverse, scales, colorspace, plotly, RSwissMaps, BFS) # swiss-data
 pacman::p_load(tidyverse, dygraphs, ggthemes, lubridate, magick, RColorBrewer, rtweet, httpuv, scales, tidytext, xts) # tennis
+devtools::install_github("tidyverse/tidyr") # for pivot_wider() and pivot_longer()

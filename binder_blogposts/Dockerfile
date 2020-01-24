@@ -1,7 +1,7 @@
 ## Build Docker binder_blogposts
 
 ## TO RUN LOCALLY:
-## docker login registry.gitlab.com # only if the project is private
+## docker login registry.gitlab.com
 ## docker build -t registry.gitlab.com/lgnbhl/blogposts/binder_blogposts .
 ## docker push registry.gitlab.com/lgnbhl/blogposts/binder_blogposts
 
