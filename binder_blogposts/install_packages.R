@@ -1,7 +1,7 @@
 # Install all packages used in each of my blog posts
 
 # install/load needed R packages
-if (!require("pacman")) install.packages("pacman")
+install.packages("pacman")
 
 pacman::p_load(tidyverse, ggalt, ggiraph, ggmap, ggthemes, maps) # bond
 pacman::p_load(tidyverse, DT, ggthemes, wordcloud, SnowballC, tidytext, tm, caret, h2o, rpart.plot, rsample, xgboost) # cooking
