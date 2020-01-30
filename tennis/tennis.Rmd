@@ -48,7 +48,7 @@ library(rtweet)
 # big4_accounts <- lookup_users(big4_usernames)
 # write_csv(big4_accounts, "big4_accounts.csv")
 
-big4_accounts <- read.csv("tennis/input/big4_accounts.csv", stringsAsFactors = F) %>%
+big4_accounts <- read.csv("input/big4_accounts.csv", stringsAsFactors = F) %>%
   select(-X)
 
 big4_accounts %>%
@@ -69,7 +69,7 @@ First, let's download all the tweets published by the Big Four and related metad
 # tweets_big4 <- rbind(tweets_federer, tweets_nadal, tweets_djokovic, tweets_murray)
 # write_csv("input/tweets_big4.csv")
 
-tweets_big4 <- read.csv("tennis/input/tweets_big4.csv", stringsAsFactors = F) %>%
+tweets_big4 <- read.csv("input/tweets_big4.csv", stringsAsFactors = F) %>%
   select(-X)
 ```
 
