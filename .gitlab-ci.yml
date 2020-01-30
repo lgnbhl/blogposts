@@ -117,6 +117,7 @@ article_movies:
 
 article_tennis:
   stage: check
+  image: rocker/verse
   script:
     - R -e 'rmarkdown::render("tennis/tennis.Rmd")'
   artifacts:
@@ -126,6 +127,7 @@ article_tennis:
 
 article_bond:
   stage: check
+  image: rocker/verse
   script:
     - R -e 'rmarkdown::render("bond/bond.Rmd")'
   artifacts:
