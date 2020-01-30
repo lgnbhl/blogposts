@@ -1,5 +1,9 @@
 # CI for selected articles
-# the articles /bond, /tennis and /cooking are not fully reproducibles
+# the article /cooking are not fully reproducibles
+
+stages:
+  #- build-image
+  - check
 
 #build_image:
   #image: docker:git
@@ -13,6 +17,7 @@
     #- master
 
 article_swissdata:
+  stage: check
   image: rocker/geospatial # rocker/verse within
   script:
     - R -e 'rmarkdown::render("swiss-data/swiss-data.Rmd")'
@@ -22,6 +27,7 @@ article_swissdata:
     when: always
 
 article_leafletmap:
+  stage: check
   image: rocker/geospatial
   script:
     - R -e 'rmarkdown::render("leaflet-map/leaflet-map.Rmd")'
@@ -31,6 +37,7 @@ article_leafletmap:
     when: always
 
 article_shdi:
+  stage: check
   image: rocker/geospatial
   script:
     - R -e 'rmarkdown::render("shdi/shdi.Rmd")'
@@ -40,6 +47,7 @@ article_shdi:
     when: always
 
 article_pokemon:
+  stage: check
   image: rocker/verse
   script:
     - R -e 'rmarkdown::render("pokemon/pokemon.Rmd")'
@@ -49,6 +57,7 @@ article_pokemon:
     when: always
 
 #article_cooking:
+  #stage: check
   #script:
     #- R -e 'rmarkdown::render("cooking/cooking.Rmd")'
   #artifacts:
@@ -57,6 +66,7 @@ article_pokemon:
     #when: always
 
 article_mapping:
+  stage: check
   image: rocker/geospatial
   script:
     - R -e 'rmarkdown::render("mapping/mapping.Rmd")'
@@ -66,6 +76,7 @@ article_mapping:
     when: always
 
 article_forecasting:
+  stage: check
   image: rocker/verse
   script:
     - R -e 'rmarkdown::render("forecasting/forecasting.Rmd")'
@@ -75,6 +86,7 @@ article_forecasting:
     when: always
 
 article_olympics:
+  stage: check
   image: rocker/verse
   script:
     - R -e 'rmarkdown::render("olympics/olympics.Rmd")'
@@ -84,6 +96,7 @@ article_olympics:
     when: always
 
 article_network:
+  stage: check
   image: rocker/verse
   script:
     - R -e 'rmarkdown::render("network/network.Rmd")'
@@ -93,6 +106,7 @@ article_network:
     when: always
 
 article_movies:
+  stage: check
   image: rocker/verse
   script:
     - R -e 'rmarkdown::render("movies/movies.Rmd")'
@@ -101,23 +115,26 @@ article_movies:
       - movies
     when: always
 
-#article_tennis:
-  #script:
-    #- R -e 'rmarkdown::render("tennis/tennis.Rmd")'
-  #artifacts:
-    #paths:
-      #- tennis
-    #when: always
+article_tennis:
+  stage: check
+  script:
+    - R -e 'rmarkdown::render("tennis/tennis.Rmd")'
+  artifacts:
+    paths:
+      - tennis
+    when: always
 
-#article_bond:
-  #script:
-    #- R -e 'rmarkdown::render("bond/bond.Rmd")'
-  #artifacts:
-    #paths:
-      #- bond
-    #when: always
+article_bond:
+  stage: check
+  script:
+    - R -e 'rmarkdown::render("bond/bond.Rmd")'
+  artifacts:
+    paths:
+      - bond
+    when: always
 
 article_orwell:
+  stage: check
   image: rocker/verse
   script:
     - R -e 'rmarkdown::render("orwell/orwell.Rmd")'
@@ -127,6 +144,7 @@ article_orwell:
     when: always
 
 article_marvel:
+  stage: check
   image: rocker/verse
   script:
     - R -e 'rmarkdown::render("marvel/marvel.Rmd")'

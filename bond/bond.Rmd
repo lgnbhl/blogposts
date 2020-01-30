@@ -138,7 +138,7 @@ library(ggmap)
     #}
 
 # write_csv(bond_connery, "output/bond_connery.csv")
-bond_connery <- read.csv("output/bond_connery.csv", header = T) # keep factor
+bond_connery <- read.csv("bond/output/bond_connery.csv", header = T) # keep factor
 
 levels(bond_connery$Film) <- c("Dr. No", "From Russia with Love", "Goldfinger", "Thunderball", "You Only Live Twice", "Diamonds Are Forever")
 
@@ -184,7 +184,7 @@ bond_craig[22,2] <- "Scotland"
   #}
 
 # write.csv(bond_craig, "output/bond_craig.csv")
-bond_craig <- read.csv("output/bond_craig.csv", header = T) # keep factor
+bond_craig <- read.csv("bond/output/bond_craig.csv", header = T) # keep factor
 
 levels(bond_craig$Film) <- c("Casino Royale", "Quantum of Solace", "Skyfall", "Spectre")
 
