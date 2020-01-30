@@ -127,7 +127,7 @@ article_tennis:
 
 article_bond:
   stage: check
-  image: rocker/verse
+  image: rocker/geospatial
   script:
     - R -e 'rmarkdown::render("bond/bond.Rmd")'
   artifacts:
