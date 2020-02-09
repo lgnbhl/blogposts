@@ -20,8 +20,6 @@ if (!require("pacman")) install.packages("pacman")
 pacman::p_load(tidyverse, ggalt, ggiraph, ggmap, ggthemes, maps)
 ```
 
-![](https://raw.githubusercontent.com/lgnbhl/lgnbhl.github.io/master/images/image_Skyfall.jpg)
-
 James Bond must be the most well-travelled man in the history of movies. As it is summer time, let's have a look at the 007 travel locations in the 24 films of the spy franchise with the R packages {maps}, {ggplot2} and {ggmap}.
 
 In this article, we will answer three questions:

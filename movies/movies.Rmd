@@ -20,8 +20,6 @@ if (!require("pacman")) install.packages("pacman")
 pacman::p_load(Amelia, caret, e1071, hrbrthemes, rvest, tidytext, tidyverse, tm, xgboost)
 ```
 
-![](https://raw.githubusercontent.com/lgnbhl/lgnbhl.github.io/master/images/image_WizardOfOz.jpg)
-
 Some time ago, I read a very interesting [post](http://giorasimchoni.com/2017/09/24/2017-09-24-where-my-girls-at/) from Giora Simchoni who used machine learning to estimate how many children's books have a central female character. Based on [this](https://www.goodreads.com/list/show/226.Favorite_books_from_my_childhood) Goodread list, he showed that for every book with a central female character, there are between 1.1 and 1.3 books written with a male protagonist.
 
 I couldn't help thinking that his analysis should be replicated on children's movies. So that's what we will do in this blog post, using [this](https://en.wikipedia.org/w/index.php?title=List_of_children%27s_films&oldid=810426354) Wikipedia article that listed 100 years of children's movies. We will see that reusing someone else code cannot be done without adapting it to the specific features of our own dataset. It's why, in addition to the multiclass classification made by Giora, we will perform a binary logistic classification. Finally, we will visualize the predictions of our models in order to know if the central character gender ratio is changing over the years[^1].

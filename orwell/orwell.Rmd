@@ -20,8 +20,6 @@ if (!require("pacman")) install.packages("pacman")
 pacman::p_load(tidyverse, ggthemes, scales, tidyr, tidytext, wordcloud)
 ```
 
-![](https://raw.githubusercontent.com/lgnbhl/lgnbhl.github.io/master/images/image_BigBrother.jpg)
-
 Dystopian books are trendy. After Donald Trump's election, George Orwell novel *1984* hit the No. 1 spot in Amazon’s book sales chart. Also because I love this book, let's make a text analysis using the R package {tidytext}.
 
 In this article, we will answer three questions:

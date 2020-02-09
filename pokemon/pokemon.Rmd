@@ -20,8 +20,6 @@ if (!require("pacman")) install.packages("pacman")
 pacman::p_load(tidyverse, DT, treemap, sunburstR, d3r, htmlwidgets)
 ```
 
-[![](https://felixluginbuhl.com/dataisbeautiful/pokemon_genders.png)](https://felixluginbuhl.com/dataisbeautiful/pokemon_genders.html)
-
 With more than 13 millions of subscribers, Reddit's *[Data Is
 Beautiful](https://www.reddit.com/r/dataisbeautiful/comments/9cuzs3/battle_dataviz_battle_for_the_month_of_september/)* is one of the main online forum on data visualization. Last week I came accross the funny dataset of the current DataViz
 monthly challenge: [Information on All 802

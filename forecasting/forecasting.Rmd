@@ -20,8 +20,6 @@ if (!require("pacman")) install.packages("pacman")
 pacman::p_load(tidyverse, lubridate, dygraphs, hrbrthemes, forecast, scales, sweep, timetk)
 ```
 
-![](https://opendata.swisscom.com/assets/theme_image/Swisscom%20Open%20Data.jpg)
-
 I recently heard that one of the major Swiss telecommunications provider, Swisscom AG, decided to share data on a [Open Data Portal](https://opendata.swisscom.com/pages/home/?flg=en). As Swiss citizen, I was curious to see if I could put my hand on interesting datasets.
 
 In this article, we will make a time series analysis of the number of phone calls by hour, day and Swiss canton in July 2017. We will build forecasting models for each canton to predict the number of phone calls per hour for the first days of August 2017. And we will do all this in a tidy way.

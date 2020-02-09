@@ -20,8 +20,6 @@ if (!require("pacman")) install.packages("pacman")
 pacman::p_load(tidyverse, dygraphs, ggthemes, lubridate, magick, RColorBrewer, rtweet, httpuv, scales, tidytext, xts)
 ```
 
-![](https://raw.githubusercontent.com/lgnbhl/lgnbhl.github.io/master/images/image_tennis.jpg)
-
 In the world of men's tennis, only four players, known as the "[Big Four](https://en.wikipedia.org/wiki/Big_Four_(tennis))", have dominated the main tournaments since 2004. You probably know their names: Roger Federer, Rafael Nadal, Novak Djokovic and Andy Murray. As they regularly make the headlines all over the world, I wanted to know more about their popularity on Twitter with the R packages {rtweet} and {tidytext}.
 
 In this article, we will answer three questions about the Big Four:

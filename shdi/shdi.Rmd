@@ -16,8 +16,6 @@ knitr::opts_chunk$set(
 )
 ```
 
-[![](https://raw.githubusercontent.com/lgnbhl/lgnbhl.github.io/master/images/screenshot_shdi-app.png)](https://lgnbhl.shinyapps.io/shdi/)
-
 Last month *Nature* published [a paper](https://www.nature.com/articles/sdata201938) introducing new data on regional human development across the globe. The Subnational Human Development Index (SHDI) Database contains data on 1625 regions of 161 countries, covering all regions and development levels of the world. It provides their Human Development Index with related indicators.
 
 I couldn't resist to have a look at this new database and try some exploratory analysis. 
