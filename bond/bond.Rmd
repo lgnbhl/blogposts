@@ -35,7 +35,7 @@ We can find on Wikipedia a full [list of James Bond film locations](https://en.w
 ```{r loading}
 library(tidyverse)
 
-bond <- read_csv("https://raw.githubusercontent.com/lgnbhl/lgnbhl.github.io/master/images/data_bond.csv")
+bond <- read_csv("https://raw.githubusercontent.com/lgnbhl/lgnbhl.github.io/master/img/data_bond.csv")
 
 print(bond)
 ```
