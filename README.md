@@ -9,8 +9,8 @@ The articles of my blog can be reproduced interactively online on my [RStudio se
 
 All the data analysis of my blog (https://felixluginbuhl.com/blog/):
 
-- [/leaflet-map](https://github.com/lgnbhl/blogposts/tree/master/leaflet-map). Most Recurring Word on each Country's Wikipedia Page (https://felixluginbuhl.com/blog/2019/12/16/leaflet-map)
-- [/swiss-data](https://github.com/lgnbhl/blogposts/tree/master/swiss-data). Exploring Switzerland Official Data. Introducing my new R package {BFS} and making easily a Swiss map (https://felixluginbuhl.com/blog/2019/11/07/swiss-data)
+- [/leaflet-map](https://github.com/lgnbhl/blogposts/tree/master/leaflet-map): [Most Recurring Word on each Country's Wikipedia Page](https://felixluginbuhl.com/blog/2019/12/16/leaflet-map)
+- [/swiss-data](https://github.com/lgnbhl/blogposts/tree/master/swiss-data): Exploring Switzerland Official Data. Introducing my new R package {BFS} and making easily a Swiss map (https://felixluginbuhl.com/blog/2019/11/07/swiss-data)
 - [/shdi](https://github.com/lgnbhl/blogposts/tree/master/shdi). The Evolution of Regional Inequalities Around the World. An interactive exploration of global human development disparities over the years (https://felixluginbuhl.com/blog/2019/04/07/shdi)
 - [/pokemon](https://github.com/lgnbhl/blogposts/tree/master/pokemon). Is There Gender Equality in the Pokémon Universe? Exploring Pokémon sex ratio and building an interactive sunburst diagram. (https://felixluginbuhl.com/blog/2018/10/06/pokemon)
 - [/cooking](https://github.com/lgnbhl/blogposts/tree/master/cooking). Can you Guess a Cuisine from its Ingredients? Building classification models to predict dish’s cuisines from recipe ingredients. (https://felixluginbuhl.com/blog/2018/06/30/cooking)
