@@ -5,9 +5,9 @@
 
 # blogposts
 
-All the data analysis of my blog (https://felixluginbuhl.com/blog/).
+The articles of my blog can be reproduced interactively online on my [RStudio server](https://mybinder.org/v2/gh/lgnbhl/blogposts/master?urlpath=rstudio) using Binder.
 
-The blog posts can be reproduced interactively online on my [RStudio server](https://mybinder.org/v2/gh/lgnbhl/blogposts/master?urlpath=rstudio) with Binder.
+All the data analysis of my blog (https://felixluginbuhl.com/blog/):
 
 - [/swiss-data](https://github.com/lgnbhl/blogposts/tree/master/swiss-data) or on [RStudio Cloud](https://rstudio.cloud/project/673254). Exploring Switzerland Official Data. Introducing my new R package {BFS} and making easily a Swiss map (https://felixluginbuhl.com/swiss-data/)
 - [/shdi](https://github.com/lgnbhl/blogposts/tree/master/shdi) or on [RStudio Cloud](https://rstudio.cloud/project/326149). The Evolution of Regional Inequalities Around the World. An interactive exploration of global human development disparities over the years (https://felixluginbuhl.com/shdi/)
