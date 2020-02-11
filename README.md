@@ -5,7 +5,7 @@
 
 # blogposts
 
-The articles of my blog can be reproduced interactively online on my [RStudio server](https://mybinder.org/v2/gh/lgnbhl/blogposts/master?urlpath=rstudio) using Binder.
+The pots of my blog can be reproduced interactively online on my [RStudio server](https://mybinder.org/v2/gh/lgnbhl/blogposts/master?urlpath=rstudio) using Binder.
 
 All the data analysis of my blog (https://felixluginbuhl.com/blog/):
 
