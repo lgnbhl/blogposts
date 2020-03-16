@@ -51,7 +51,7 @@ We currently have access to 676 BFS datasets.
 The challenge today is to plot a detailed map of Switzerland containing all 2'212 Swiss municipalites, or "gemeinde" in German. How many current BFS datasets contain the word "gemeinde" in their title? Let's find out using the `bfs_search()` function.
 
 ```{r}
-meta_de_gemeinde <- bfs_search("gemeinde", data = meta_de)
+meta_de_gemeinde <- bfs_search(data = meta_de, string = "gemeinde")
 meta_de_gemeinde
 ```
 
@@ -61,7 +61,7 @@ We got 34 different datasets related to Swiss municipalities. I am interested by
 # browseURL(meta_de_gemeinde$url[1]) # open related webpage
 # meta_de_gemeinde$title[1] # print title
 df_title <- "Ausländische Grenzgänger/innen nach Geschlecht und Arbeitsgemeinde"
-meta_de_gemeinde1 <- bfs_search(df_title, meta_de_gemeinde)
+meta_de_gemeinde1 <- bfs_search(data = meta_de_gemeinde, string = df_title)
 data_bfs <- bfs_get_dataset(meta_de_gemeinde1$url_px[1])
 data_bfs
 ```
