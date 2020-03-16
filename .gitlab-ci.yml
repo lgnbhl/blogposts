@@ -5,6 +5,10 @@ stages:
   #- build-image
   - check
 
+# create runtime.txt with current day
+before_script:
+  - R -e 'sink("runtime.txt"); cat(paste0("r-", Sys.Date())); sink()'
+
 #build_image:
   #image: docker:git
   #services:
