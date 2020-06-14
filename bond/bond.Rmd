@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 
 # install/load needed R packages
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, ggalt, ggiraph, ggmap, ggthemes, maps)
+pacman::p_load(tidyverse, ggmap, ggthemes, maps) # ggiraph, ggalt
 ```
 
 James Bond must be the most well-travelled man in the history of movies. As it is summer time, let's have a look at the 007 travel locations in the 24 films of the spy franchise with the R packages {maps}, {ggplot2} and {ggmap}.
@@ -61,7 +61,7 @@ bond <- bond %>%
 bond_number <- bond %>%
   count(region, sort = TRUE)
 
-library(ggalt)
+#library(ggalt)
 library(ggthemes)
 
 ggplot() +
@@ -75,7 +75,8 @@ ggplot() +
                        name = "Number of visits",
                        palette = "OrRd", direction = 1,
                        guide = guide_legend(title.position = "top")) +
-  ggalt::coord_proj("+proj=wintri") +
+  #ggalt::coord_proj("+proj=wintri") +
+  coord_sf(crs = "+proj=moll") + #Mollweide projection
   ggthemes::theme_map() +
   theme(plot.title = element_text(size = 20, face = "bold"),
         plot.subtitle = element_text(size = 11),
@@ -136,25 +137,27 @@ bond_connery[33,2] <- "Mexico" # "Oil rig in Baja California" in "Diamonds Are F
     #}
 
 # write_csv(bond_connery, "output/bond_connery.csv")
-bond_connery <- read.csv("output/bond_connery.csv", header = T) # keep factor
+bond_connery <- read.csv("bond/output/bond_connery.csv", header = T) # keep factor
 
 levels(bond_connery$Film) <- c("Dr. No", "From Russia with Love", "Goldfinger", "Thunderball", "You Only Live Twice", "Diamonds Are Forever")
 
-library(ggiraph)
+#library(ggiraph)
 
 g1 <- ggplot() +
   geom_map(data = world, map = world, aes(x = long, y = lat, map_id = region),
            fill = "lightgrey", col = "white", size = 0.2) +
-  geom_point_interactive(data = bond_connery, aes(lon, lat, tooltip = loc), 
+  geom_point(data = bond_connery, aes(lon, lat, tooltip = loc), # geom_point_interactive
            color = "white", size = 3, fill= "brown1", pch = 21) +
-  coord_proj("+proj=wintri") +
+  #coord_proj("+proj=wintri") +
+  coord_sf(crs = "+proj=moll") + #Mollweide projection
   theme_map() +
   labs(labs(title = "James Bond locations in movies starring Sean Connery",
             caption = "Félix Luginbühl (@lgnbhl)\n Data source: Wikipedia")) +
   theme(plot.title = element_text(size = 14, hjust = 0.5, face = "bold"),
                plot.caption = element_text(size = 8, color = "dimkgrey"))
 
-ggiraph(print(g1))
+#ggiraph(print(g1))
+g1
 ```
 
 A nice interactive map!
@@ -182,23 +185,25 @@ bond_craig[22,2] <- "Scotland"
   #}
 
 # write.csv(bond_craig, "output/bond_craig.csv")
-bond_craig <- read.csv("output/bond_craig.csv", header = T) # keep factor
+bond_craig <- read.csv("bond/output/bond_craig.csv", header = T) # keep factor
 
 levels(bond_craig$Film) <- c("Casino Royale", "Quantum of Solace", "Skyfall", "Spectre")
 
 g2 <- ggplot() +
   geom_map(data = world, map = world, aes(x = long, y = lat, map_id = region),
            fill = "lightgrey", col = "white", size = 0.2) +
-  geom_point_interactive(data = bond_craig, aes(lon, lat, tooltip = loc), 
+  geom_point(data = bond_craig, aes(lon, lat, tooltip = loc), #geom_point_interactive 
            color = "white", size = 3, fill = "brown1", pch = 21) +
-  coord_proj("+proj=wintri") +
+  #coord_proj("+proj=wintri") +
+  coord_sf(crs = "+proj=moll") + #Mollweide projection
   theme_map() +
   labs(labs(title = "James Bond locations in movies starring Daniel Craig",
             caption = "Félix Luginbühl (@lgnbhl)\n Data source: Wikipedia")) +
   theme(plot.title = element_text(size = 14, hjust = 0.5, face = "bold"),
         plot.caption = element_text(size = 8, color = "dimkgrey"))
 
-ggiraph(print(g2))
+#ggiraph(print(g2))
+g2
 ```
 
 And the locations by movie:
