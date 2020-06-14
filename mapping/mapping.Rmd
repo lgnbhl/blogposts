@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 
 # install/load needed R packages
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, rvest, sf, countrycode, ggalt, ggthemes, hrbrthemes, leaflet, RColorBrewer, readxl, rnaturalearth, rnaturalearthdata, rgeos)
+pacman::p_load(tidyverse, rvest, sf, countrycode, ggalt, ggthemes, leaflet, RColorBrewer, readxl, rnaturalearth, rnaturalearthdata, rgeos) # hrbrthemes
 ```
 
 I am a big fan of The Economist charts, in particular the ones published
@@ -43,9 +43,9 @@ library(tidyverse)
 library(rvest)
 library(readxl)
 
-url_2016 <- "http://fundforpeace.org/fsi/wp-content/uploads/data/fsi-2016.xlsx"
+url_2016 <- "https://fragilestatesindex.org/wp-content/uploads/data/fsi-2016.xlsx"
 # download.file(url = url_2016, destfile = "input/index_2016.xlsx")
-index_2016 <- read_excel(path = "input/index_2016.xlsx")
+index_2016 <- read_excel(path = "mapping/input/index_2016.xlsx")
 
 index_2016 %>% select(Country, Year, Rank, Total)
 ```
@@ -105,7 +105,9 @@ ggplot() +
     col = "lightblue", fill= "lightgrey", size = 0.1) +
   geom_map(data = index_2016, map = world,
     aes(map_id = Country, fill = Classes)) +
-  ggalt::coord_proj("+proj=wintri") + # for Winkel Trimple projection
+  # coord_proj() for Winkel Trimple projection is not working anymore
+  #ggalt::coord_proj("+proj=wintri") + # for Winkel Trimple projection
+  coord_sf(crs = "+proj=moll") + #Mollweide projection
   scale_fill_brewer(NULL, palette = "RdYlGn", direction = -1) +
   ggthemes::theme_map() +
   #hrbrthemes::theme_ipsum() +
@@ -122,7 +124,7 @@ It doesn't look that pretty to me. Let’s try again, using the `geom_sf` functi
 library(rnaturalearth)
 library(countrycode)
 library(sf)
-library(hrbrthemes)
+#library(hrbrthemes)
 
 earth <- ne_countries(scale = 50, returnclass = "sf") %>%
   select(admin, geometry, iso_a2)
@@ -134,7 +136,7 @@ data_map <- inner_join(earth, index_2016, by = c("iso_a2" = "iso2")) %>%
   select(Country, Total, Classes, geometry) %>%
   sf::st_as_sf() # to coerce dataset to an sf object
 
-library(hrbrthemes)
+#library(hrbrthemes)
 data_map %>%
   ggplot() +
   geom_sf(aes(fill = Classes), size = 0.1, color = "white") +
@@ -151,7 +153,7 @@ data_map %>%
                       keywidth = unit(3, units = "mm"),
                       label.position = "right",
                       title.position = "top")) +
-  theme_ipsum() +
+  #hrbrthemes::theme_ipsum() +
   theme(legend.direction = "horizontal",
         legend.position = "bottom") +
   labs(title = "Fragile States Index",
