@@ -45,7 +45,7 @@ library(readxl)
 
 url_2016 <- "https://fragilestatesindex.org/wp-content/uploads/data/fsi-2016.xlsx"
 # download.file(url = url_2016, destfile = "input/index_2016.xlsx")
-index_2016 <- read_excel(path = "mapping/input/index_2016.xlsx")
+index_2016 <- read_excel(path = "input/index_2016.xlsx")
 
 index_2016 %>% select(Country, Year, Rank, Total)
 ```
